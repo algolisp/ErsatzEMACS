@@ -395,6 +395,7 @@ void update ()
 
   curcol = 0;
   i = 0;
+  c = 0;
   while (i < curwp->w_doto)
     {
       c = lgetc (lp, i++);
@@ -434,8 +435,7 @@ void update ()
 	      vscreen[i]->v_flag |= VFCHG;
 	      if ((wp != curwp) || (lp != wp->w_dotp) ||
 		  ((curcol < term.t_ncol - 1) && (c & 0x80) == 0)
-		  || ((curcol < term.t_ncol - 2) && (c & 0x80) != 0)
-		  )
+		  || ((curcol < term.t_ncol - 2) && (c & 0x80) != 0))
 		{
 		  vtmove (i, 0);
 		  for (j = 0; j < llength (lp); ++j)

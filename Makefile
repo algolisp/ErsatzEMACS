@@ -2,7 +2,7 @@
 # users might prefer "me" or "uemacs" instead.
 EXEC=ee
 
-CFLAGS=-Wall -O0 -g
+CFLAGS=-Wall -O2
 # To be /really/ fanatical on the executible's size...
 #CFLAGS=-Os -fomit-frame-pointer -malign-loops=0 -malign-jumps=0 -malign-functions=0 -Wall
 
