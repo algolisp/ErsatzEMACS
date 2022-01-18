@@ -531,6 +531,14 @@ void updext ()
 	      goto l;
 	    }
 	}
+      else if (c == '\t')
+	{
+	  do
+	    {
+	      ++vtcol;
+	    }
+	  while (((vtcol + lbound) & 0x07) != 0);
+	}
       else
 	{
 	  ++vtcol;

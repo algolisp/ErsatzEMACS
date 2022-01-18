@@ -329,6 +329,7 @@ int lnewlinei ()
 	}
       wp = wp->w_wndp;
     }
+  if (curbp->b_progmode != 0)
   {
     int i;
     
