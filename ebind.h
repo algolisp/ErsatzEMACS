@@ -52,6 +52,8 @@ KEYTAB keytab[] = {
   {META | '.', setmark},
   {META | '<', gotobob},
   {META | '>', gotoeob},
+  {META | '/', completeword},
+  {META | '\'', toggleprog},
   {META | 'B', backword},
   {META | 'C', capword},
   {META | 'D', delfword},

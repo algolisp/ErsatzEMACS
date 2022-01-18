@@ -2,7 +2,7 @@
 # users might prefer "me" or "uemacs" instead.
 EXEC=ee
 
-CFLAGS=-Wall -O2
+CFLAGS=-Wall -O0 -g
 # To be /really/ fanatical on the executible's size...
 #CFLAGS=-Os -fomit-frame-pointer -malign-loops=0 -malign-jumps=0 -malign-functions=0 -Wall
 
@@ -11,7 +11,7 @@ CFLAGS=-Wall -O2
 #DUMBCONS= -DFORCE_COLS=80 -DFORCE_ROWS=24
 
 # NetBSD, Linux, and nearly all other POSIX-based enviroments
-LFLAGS= -ltermcap
+LFLAGS= -L. -ltermcap
 # Try this on some older systems
 #LFLAGS= -lcurses
 # For very early Linux
@@ -29,10 +29,12 @@ EXTRA=	README Makefile ERSATZ.keys ee.1 ChangeLog
 HFILES=	estruct.h edef.h efunc.h ebind.h
 
 CFILES=	basic.c buffer.c display.c file.c fileio.c line.c main.c \
-	random.c region.c search.c tcap.c termio.c window.c word.c
+	random.c region.c search.c tcap.c termio.c window.c word.c \
+	utils.c
 
 OFILES=	basic.o buffer.o display.o file.o fileio.o line.o main.o \
-	random.o region.o search.o tcap.o termio.o window.o word.o
+	random.o region.o search.o tcap.o termio.o window.o word.o \
+	utils.o
 
 all:	$(OFILES)
 	$(CC) $(CFLAGS) $(OFILES) -o $(EXEC) $(LFLAGS)
@@ -71,3 +73,4 @@ tcap.o: tcap.c estruct.h edef.h
 termio.o: termio.c
 window.o: window.c estruct.h edef.h
 word.o: word.c estruct.h edef.h
+utils.o: utils.c estruct.h edef.h

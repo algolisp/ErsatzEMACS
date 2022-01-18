@@ -6,13 +6,15 @@
 
 #define maindef			/* make global definitions not external */
 
-#include <string.h>		/* strncpy(3) */
+#include <string.h>		/* copy_string(3) */
 #include <stdlib.h>		/* malloc(3) */
 #include "estruct.h"		/* global structures and defines */
 #include "efunc.h"		/* function declarations and name table */
 #include "edef.h"		/* global definitions */
 #include "ebind.h"
 
+extern int utf8_length (char c);
+extern void copy_string (char *to, char *from, int n);
 extern void getwinsize();
 extern void vtinit ();
 extern void vttidy ();
@@ -50,7 +52,7 @@ int main (int argc, char *argv[])
 
   /* initialize the editor and process the startup file */
   getwinsize();			/* find out the "real" screen size */
-  strncpy (bname, "main", 5);	/* default buffer name */
+  copy_string (bname, "main", 5);	/* default buffer name */
   edinit (bname);		/* Buffers, windows */
   vtinit ();			/* Displays */
   ffile = TRUE;			/* no file to edit yet */
@@ -67,12 +69,12 @@ int main (int argc, char *argv[])
 	{
 	  bp = curbp;
 	  makename (bname, argv[carg]);
-	  strncpy (bp->b_bname, bname, NBUFN);
-	  strncpy (bp->b_fname, argv[carg], NFILEN);
+	  copy_string (bp->b_bname, bname, NBUFN);
+	  copy_string (bp->b_fname, argv[carg], NFILEN);
 	  if (readin (argv[carg]) == ABORT)
 	    {
-	      strncpy (bp->b_bname, "main", 5);
-	      strncpy (bp->b_fname, "", 1);
+	      copy_string (bp->b_bname, "main", 5);
+	      copy_string (bp->b_fname, "", 1);
 	    }
 	  bp->b_dotp = bp->b_linep;
 	  bp->b_doto = 0;
@@ -82,7 +84,7 @@ int main (int argc, char *argv[])
 	{
 	  /* set this to inactive */
 	  bp = bfind (bname, TRUE, 0);
-	  strncpy (bp->b_fname, argv[carg], NFILEN);
+	  copy_string (bp->b_fname, argv[carg], NFILEN);
 	  bp->b_active = FALSE;
 	}
     }
@@ -242,6 +244,7 @@ void edinit (char bname[])
  */
 int execute (int c, int f, int n)
 {
+  int u;
   KEYTAB *ktp;
   int status;
 
@@ -258,8 +261,7 @@ int execute (int c, int f, int n)
       ++ktp;
     }
 
-  if ((c >= 0x20 && c <= 0x7E)	/* Self inserting */
-      || (c >= 0xA0 && c <= 0xFE))
+  if (c >= 0x20)	/* Self inserting */
     {
       if (n <= 0)
 	{			/* Fenceposts */
@@ -269,6 +271,10 @@ int execute (int c, int f, int n)
       thisflag = 0;		/* For the future */
 
       status = linsert (n, c);
+      for (u = utf8_length (c) - 1;
+	   u > 0 && status == TRUE;
+	   u--)
+	status = linsert (n, getkey ());
 
       lastflag = thisflag;
       return (status);

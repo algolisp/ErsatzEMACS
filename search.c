@@ -4,10 +4,11 @@
  * strings
  */
 
-#include <string.h>		/* strncpy(3), strncat(3) */
+#include <string.h>		/* copy_string(3), strncat(3) */
 #include "estruct.h"
 #include "edef.h"
 
+extern void copy_string (char *to, char *from, int n);
 extern void mlwrite ();
 extern int mlreplyt (char *prompt, char *buf, int nbuf, char eolchar);
 extern void update ();
@@ -214,10 +215,15 @@ int bsearch (int f, int n)
  */
 int eq (int bc, int pc)
 {
+  bc = (unsigned char) bc;
+  pc = (unsigned char) pc;
   if (bc >= 'a' && bc <= 'z')
     bc -= 0x20;
   if (pc >= 'a' && pc <= 'z')
     pc -= 0x20;
+  if ((bc & 0x80) != 0 && (bc & 0x40) != 0
+      && (pc & 0x80) != 0 && (pc & 0x40) != 0)
+    return TRUE;
   if (bc == pc)
     return (TRUE);
   return (FALSE);
@@ -236,7 +242,7 @@ int readpattern (char *prompt)
   char tpat[NPAT + 20];
   int s;
 
-  strncpy (tpat, prompt, NPAT-12); /* copy prompt to output string */
+  copy_string (tpat, prompt, NPAT-12); /* copy prompt to output string */
   strncat (tpat, " [", 3);	/* build new prompt string */
   expandp (&pat[0], &tpat[strlen (tpat)], NPAT / 2); /* add old pattern */
   strncat (tpat, "]<ESC>: ", 9);
@@ -244,7 +250,7 @@ int readpattern (char *prompt)
   s = mlreplyt (tpat, tpat, NPAT, 27); /* Read pattern */
 
   if (s == TRUE)		/* Specified */
-    strncpy (pat, tpat, NPAT);
+    copy_string (pat, tpat, NPAT);
   else if (s == FALSE && pat[0] != 0) /* CR, but old one */
     s = TRUE;
 
@@ -293,16 +299,16 @@ int replaces (int kind, int f, int n)
   /* ask the user for the text of a pattern */
   if ((s = readpattern ((kind == FALSE ? "Replace" : "Query replace"))) != TRUE)
     return (s);
-  strncpy (&tpat[0], &pat[0], NPAT); /* salt it away */
+  copy_string (&tpat[0], &pat[0], NPAT); /* salt it away */
 
   /* ask for the replacement string */
-  strncpy (&pat[0], &rpat[0], NPAT); /* set up default string */
+  copy_string (&pat[0], &rpat[0], NPAT); /* set up default string */
   if ((s = readpattern ("with")) == ABORT)
     return (s);
 
   /* move everything to the right place and length them */
-  strncpy (&rpat[0], &pat[0], NPAT);
-  strncpy (&pat[0], &tpat[0], NPAT);
+  copy_string (&rpat[0], &pat[0], NPAT);
+  copy_string (&pat[0], &tpat[0], NPAT);
   slength = strlen (&pat[0]);
   rlength = strlen (&rpat[0]);
 
@@ -312,7 +318,7 @@ int replaces (int kind, int f, int n)
   nlrepl = FALSE;
 
   /* build query replace question string */
-  strncpy (tpat, "Replace '", 10);
+  copy_string (tpat, "Replace '", 10);
   expandp (&pat[0], &tpat[strlen (tpat)], NPAT / 3);
   strncat (tpat, "' with '", 9);
   expandp (&rpat[0], &tpat[strlen (tpat)], NPAT / 3);
@@ -497,10 +503,10 @@ int forscan (char *patrn, int leavep)
  */
 void expandp (char *srcstr, char *deststr, int maxlength)
 {
-  char c;			/* current char to translate */
+  int c;			/* current char to translate */
 
   /* scan through the string */
-  while ((c = *srcstr++) != 0)
+  while ((c = (unsigned char) *srcstr++) != 0)
     {
       if (c == '\n')
 	{			/* its an EOL */

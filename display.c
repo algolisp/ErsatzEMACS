@@ -6,9 +6,14 @@
  */
 
 #include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
 #include "estruct.h"
 #include "edef.h"
 
+extern int utf8_length (char c);
+extern void copy_string (char *to, char *from, int n);
+extern int string_width (char *s, int n);
 extern int typahead ();
 extern int ctrlg ();
 
@@ -42,12 +47,15 @@ typedef struct VIDEO {
 #define VFEXT	0x0002		/* extended (beyond column 80) */
 #define VFREV	0x0004		/* reverse video status */
 #define VFREQ	0x0008		/* reverse video request */
+#define VFMDL	0x0010		/* reverse video request */
 
 int vtrow = 0;			/* Row location of SW cursor */
 int vtcol = 0;			/* Column location of SW cursor */
 int ttrow = HUGE;		/* Row location of HW cursor */
 int ttcol = HUGE;		/* Column location of HW cursor */
 int lbound = 0;			/* leftmost column of line being displayed */
+int progmode = 0;
+int stropping = 0;
 
 VIDEO **vscreen;		/* Virtual screen */
 VIDEO **pscreen;		/* Physical screen */
@@ -100,7 +108,6 @@ void mlerase ()
 void vtinit ()
 {
   VIDEO *vp;
-  char *malloc ();
   int i;
 
   (*term.t_open) ();
@@ -117,14 +124,14 @@ void vtinit ()
 
   for (i = 0; i < term.t_nrow; ++i)
     {
-      vp = (VIDEO *) malloc (sizeof (VIDEO) + term.t_ncol);
+      vp = (VIDEO *) malloc (sizeof (VIDEO) + term.t_nlinebuf);
 
       if (vp == NULL)
 	exit (1);
 
       vp->v_flag = 0;
       vscreen[i] = vp;
-      vp = (VIDEO *) malloc (sizeof (VIDEO) + term.t_ncol);
+      vp = (VIDEO *) malloc (sizeof (VIDEO) + term.t_nlinebuf);
 
       if (vp == NULL)
 	exit (1);
@@ -168,12 +175,22 @@ void vtputc (int c)
 {
   VIDEO *vp;
 
+  c = (unsigned char) c;
   vp = vscreen[vtrow];
-
-  if (vtcol >= term.t_ncol)
+  if (vtcol >= term.t_ncol
+      && string_width (vp->v_text, vtcol) >= term.t_ncol)
     {
-      vtcol = (vtcol + 0x07) & ~0x07;
-      vp->v_text[term.t_ncol - 1] = '$';
+      int n;
+      char *p;
+      
+      p = vp->v_text;
+      n = vtcol;
+      while ((p[n] & 0xc0) == 0x80)
+	n--;
+      n--;
+      while ((p[n] & 0xc0) == 0x80)
+	p[n--] = '?';
+      p[n] = '?';
     }
   else if (c == '\t')
     {
@@ -200,12 +217,23 @@ void vtpute (int c)
 {
   VIDEO *vp;
 
+  c = (unsigned char) c;
   vp = vscreen[vtrow];
 
-  if (vtcol >= term.t_ncol)
+  if (vtcol >= term.t_ncol
+      && string_width (vp->v_text, vtcol) >= term.t_ncol)
     {
-      vtcol = (vtcol + 0x07) & ~0x07;
-      vp->v_text[term.t_ncol - 1] = '$';
+	int n;
+	char *p;
+
+	p = vp->v_text;
+	n = vtcol;
+	while ((p[n] & 0xc0) == 0x80)
+	  n--;
+	n--;
+	while ((p[n] & 0xc0) == 0x80)
+	  p[n--] = '$';
+	p[n] = '$';
     }
   else if (c == '\t')
     {
@@ -221,11 +249,7 @@ void vtpute (int c)
       vtpute (c ^ 0x40);
     }
   else
-    {
-      if (vtcol >= 0)
-	vp->v_text[vtcol] = c;
-      ++vtcol;
-    }
+    vp->v_text[vtcol++] = c;
 }
 
 /*
@@ -237,7 +261,7 @@ void vteeol ()
   VIDEO *vp;
 
   vp = vscreen[vtrow];
-  while (vtcol < term.t_ncol)
+  while (vtcol < term.t_nlinebuf)
     vp->v_text[vtcol++] = ' ';
 }
 
@@ -376,11 +400,14 @@ void update ()
       c = lgetc (lp, i++);
       if (c == '\t')
 	curcol |= 0x07;
-      else if (c < 0x20 || c == 0x7F)
+      else if ((c & 0xc0) == 0x80)
+	continue;
+      else if (c < 0x20 || c == 0x7F || (c & 0x80) != 0)
 	++curcol;
       ++curcol;
     }
-  if (curcol >= term.t_ncol - 1)
+  if (curcol >= term.t_ncol - 1
+      || ((curcol >= term.t_ncol - 2) && (c & 0x80) != 0))
     {				 /* extended line */
       /* flag we are extended and changed */
       vscreen[currow]->v_flag |= VFEXT | VFCHG;
@@ -406,7 +433,9 @@ void update ()
 	      /* always flag extended lines as changed */
 	      vscreen[i]->v_flag |= VFCHG;
 	      if ((wp != curwp) || (lp != wp->w_dotp) ||
-		  (curcol < term.t_ncol - 1))
+		  ((curcol < term.t_ncol - 1) && (c & 0x80) == 0)
+		  || ((curcol < term.t_ncol - 2) && (c & 0x80) != 0)
+		  )
 		{
 		  vtmove (i, 0);
 		  for (j = 0; j < llength (lp); ++j)
@@ -432,7 +461,7 @@ void update ()
 	{
 	  vscreen[i]->v_flag |= VFCHG;
 	  vp1 = pscreen[i];
-	  for (j = 0; j < term.t_ncol; ++j)
+	  for (j = 0; j < term.t_nlinebuf; ++j)
 	    vp1->v_text[j] = ' ';
 	}
 
@@ -474,6 +503,7 @@ void updext ()
   LINE *lp;			/* pointer to current line */
   int rcursor;			/* real cursor location */
   int j;			/* index into line */
+  char c;
 
   /* calculate what column the real cursor will end up in */
   rcursor = ((curcol - term.t_ncol) % term.t_scrsiz) + term.t_margin;
@@ -484,11 +514,55 @@ void updext ()
   vtmove (currow, -lbound);	/* start scanning offscreen */
   lp = curwp->w_dotp;		/* line to output */
   for (j = 0; j < llength (lp); ++j) /* until the end-of-line */
-    vtpute (lgetc (lp, j));
+    {
+      c = lgetc (lp, j);
+      if (vtcol >= 0)
+	{
+	  vtpute (c);
+	}
+      else if ((c & 0x80) != 0)
+	{
+	  vtcol += 2;
+	l:
+	  c = lgetc (lp, j + 1);
+	  if ((c & 0xc0) == 0x80)
+	    {
+	      j++;
+	      goto l;
+	    }
+	}
+      else
+	{
+	  ++vtcol;
+	}
+      if (vtcol == 0)
+	{
+	  ++vtcol;
+	  ++curcol;
+	}
+    }
   /* truncate the virtual line */
   vteeol ();
   /* and put a '$' in column 1 */
   vscreen[currow]->v_text[0] = '$';
+}
+
+void toggle_stropping (int c)
+{
+  if (isupper (c) || c == '\'')
+    {
+      if (stropping == 0)
+	{
+	  (*term.t_boldon) ();
+	  stropping = 1;
+	}
+      return;
+    }
+  if (stropping == 1)
+    {
+      (*term.t_boldoff) ();
+      stropping = 0;
+    }
 }
 
 /*
@@ -502,6 +576,7 @@ void updateline (int row, char vline[], char pline[], short *flags)
   int nbflag;			/* non-blanks to the right flag? */
   int rev;			/* reverse video flag */
   int req;			/* reverse video request flag */
+  int u, i;
 
   /* set up pointers to virtual and physical lines */
   cp1 = &vline[0];
@@ -514,14 +589,32 @@ void updateline (int row, char vline[], char pline[], short *flags)
   if (rev != req)
     {
       movecursor (row, 0);	 /* Go to start of line */
+      if (req != FALSE && stropping == 1)
+	{
+	  (*term.t_boldoff) ();
+	  stropping = 0;
+	}
       (*term.t_rev) (req != FALSE);	  /* set rev video if needed */
 
       /* scan through the line and dump it to the screen and the virtual
        * screen array */
-      cp3 = &vline[term.t_ncol];
-      while (cp1 < cp3)
+      cp3 = &vline[term.t_nlinebuf];
+      while (cp1 < cp3 && ttcol < term.t_ncol)
 	{
+	  if (curbp->b_progmode != 0 && req == FALSE)
+	    toggle_stropping (*cp1);
 	  (*term.t_putchar) (*cp1);
+	  if ((*cp1 & 0x80) != 0)
+	    {
+	      *cp2++ = *cp1++;
+	      ttcol += 2;
+	      while ((*cp1 & 0xc0) == 0x80)
+		{
+		  (*term.t_putchar) (*cp1);
+		  *cp2++ = *cp1++;
+		}
+	      continue;
+	    }
 	  ++ttcol;
 	  *cp2++ = *cp1++;
 	}
@@ -537,25 +630,35 @@ void updateline (int row, char vline[], char pline[], short *flags)
     }
 
   /* advance past any common chars at the left */
-  while (cp1 != &vline[term.t_ncol] && cp1[0] == cp2[0])
+  while (cp1 != &vline[term.t_nlinebuf] && cp1[0] == cp2[0])
     {
+      u = utf8_length (cp1[0]);
+      if (u > 1)
+	{
+	  for (i = 1; i < u; i++)
+	    if (cp1[i] != cp2[i])
+	      goto l;
+	  cp1 += u;
+	  cp2 += u;
+	  continue;
+	}
       ++cp1;
       ++cp2;
     }
-
+ l:
   /* This can still happen, even though we only call this routine on changed
    * lines. A hard update is always done when a line splits, a massive change
    * is done, or a buffer is displayed twice. This optimizes out most of the
    * excess updating. A lot of computes are used, but these tend to be hard
    * operations that do a lot of update, so I don't really care */
   /* if both lines are the same, no update needs to be done */
-  if (cp1 == &vline[term.t_ncol])
+  if (cp1 == &vline[term.t_nlinebuf])
     return;
 
   /* find out if there is a match on the right */
   nbflag = FALSE;
-  cp3 = &vline[term.t_ncol];
-  cp4 = &pline[term.t_ncol];
+  cp3 = &vline[term.t_nlinebuf];
+  cp4 = &pline[term.t_nlinebuf];
 
   while (cp3[-1] == cp4[-1])
     {
@@ -574,11 +677,25 @@ void updateline (int row, char vline[], char pline[], short *flags)
       if (cp3 - cp5 <= 3)	/* Use only if erase is */
 	cp5 = cp3;		/* fewer characters */
     }
-  movecursor (row, cp1 - &vline[0]); /* Go to start of line */
+  /* Go to start of line */
+  movecursor (row, string_width (vline, cp1 - &vline[0]));
 
-  while (cp1 != cp5)
+  while (cp1 < cp5 && ttcol < term.t_ncol)
     {				/* Ordinary */
+      if (curbp->b_progmode != 0 && req == FALSE)
+	toggle_stropping (*cp1);
       (*term.t_putchar) (*cp1);
+      if ((*cp1 & 0x80) != 0)
+	{
+	  *cp2++ = *cp1++;
+	  ttcol += 2;
+	  while ((*cp1 & 0xc0) == 0x80)
+	    {
+	      (*term.t_putchar) (*cp1);
+	      *cp2++ = *cp1++;
+	    }
+	  continue;
+	}
       ++ttcol;
       *cp2++ = *cp1++;
     }
@@ -608,7 +725,7 @@ void modeline (WINDOW *wp)
   int n;			/* cursor position count */
 
   n = wp->w_toprow + wp->w_ntrows; /* Location */
-  vscreen[n]->v_flag |= VFCHG; /* Redraw next time */
+  vscreen[n]->v_flag |= VFCHG | VFMDL; /* Redraw next time */
   vtmove (n, 0);	       /* Seek to right line */
   if (wp == curwp)	       /* mark the current buffer */
     lchar = '=';
@@ -627,7 +744,7 @@ void modeline (WINDOW *wp)
     vtputc (lchar);
 
   n = 2;
-  strncpy (tline, " ErsatzEMACS ", 14);
+  copy_string (tline, " ErsatzEMACS ", 14);
 
   cp = &tline[0];
   while ((c = *cp++) != 0)
@@ -708,10 +825,15 @@ int mlyesno (char *prompt)
   char c;			/* input character */
   char buf[NPAT];		/* prompt to user */
 
+  if (stropping == 1)
+    {
+      (*term.t_boldoff) ();
+      stropping = 0;
+    }
   for (;;)
     {
       /* build and prompt the user */
-      strncpy (buf, prompt, 60);
+      copy_string (buf, prompt, 60);
       strncat (buf, " [y/n]? ", 9);
       mlwrite (buf);
 
@@ -736,6 +858,11 @@ int mlreplyt (char *prompt, char *buf, int nbuf, char eolchar)
 
   cpos = 0;
 
+  if (stropping == 1)
+    {
+      (*term.t_boldoff) ();
+      stropping = 0;
+    }
   if (kbdmop != NULL)
     {
       while ((c = *kbdmop++) != '\0')
@@ -792,12 +919,16 @@ int mlreplyt (char *prompt, char *buf, int nbuf, char eolchar)
 	{			       /* rubout/erase */
 	  if (cpos != 0)
 	    {
+	      while ((buf[--cpos] & 0xc0) == 0x80)
+		;
+	      if ((buf[cpos] & 0x80) != 0)
+		--ttcol;
 	      (*term.t_putchar) ('\b');
 	      (*term.t_putchar) (' ');
 	      (*term.t_putchar) ('\b');
 	      --ttcol;
 
-	      if (buf[--cpos] < 0x20)
+	      if (buf[cpos] < 0x20)
 		{
 		  (*term.t_putchar) ('\b');
 		  (*term.t_putchar) (' ');
@@ -887,6 +1018,11 @@ void mlwrite (char *fmt, int arg)
   int c;
   char *ap;
 
+  if (stropping == 1)
+    {
+      (*term.t_boldoff) ();
+      stropping = 0;
+    }
   if (eolexist == FALSE)
     {
       mlerase ();
@@ -1009,3 +1145,23 @@ void mlputli (long l, int r)
   ++ttcol;
 }
 
+void clearpscreen ()
+{
+  int i, j;
+
+  for (i = 0; i < term.t_nrow; ++i)
+    {
+      vscreen[i]->v_flag |= VFCHG;
+      for (j = 0; j < term.t_nlinebuf; j++)
+	pscreen[i]->v_text[j] = 0;
+    }
+}
+
+int toggleprog (int f, int n)
+{
+  curbp->b_progmode = !curbp->b_progmode;
+  if (!curbp->b_progmode)
+    (*term.t_boldoff) ();
+  clearpscreen ();
+  return TRUE;
+}

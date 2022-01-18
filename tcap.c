@@ -3,6 +3,7 @@
 #define	termdef	1		/* don't define "term" external */
 
 #include <stdio.h>		/* puts(3), snprintf(3) */
+#include <stdlib.h>
 #include "estruct.h"
 #include "edef.h"
 #undef CTRL
@@ -27,6 +28,8 @@ void tcapeeol();
 void tcapeeop();
 void tcaprev();
 void tcapbeep();
+void tcapboldon();
+void tcapboldoff();
 
 #define	MARGIN 8
 #define	SCRSIZ 64
@@ -34,11 +37,12 @@ void tcapbeep();
 #define TCAPSLEN 64
 
 char tcapbuf[TCAPSLEN];		/* capabilities actually used */
-char *CM, *CE, *CL, *SO, *SE;
+char *CM, *CE, *CL, *SO, *SE, *MD, *ME;
 
 TERM term = {
-  0, 0, MARGIN, SCRSIZ, tcapopen, ttclose, ttgetc, ttputc,
-  ttflush, tcapmove, tcapeeol, tcapeeop, tcapbeep, tcaprev
+  0, 0, 0, MARGIN, SCRSIZ, tcapopen, ttclose, ttgetc, ttputc,
+  ttflush, tcapmove, tcapeeol, tcapeeop, tcapbeep, tcaprev,
+  tcapboldon, tcapboldoff
 };
 
 void getwinsize ()
@@ -60,6 +64,7 @@ void getwinsize ()
       exit (1);
     }
   term.t_ncol = cols;
+  term.t_nlinebuf = cols * 8;
   term.t_nrow = rows-1;
 }
 
@@ -85,6 +90,8 @@ void tcapopen ()
   CE = tgetstr ("ce", &p);
   SE = tgetstr ("se", &p);
   SO = tgetstr ("so", &p);
+  MD = tgetstr ("md", &p);
+  ME = tgetstr ("me", &p);
 
   if (CE == NULL)
     eolexist = FALSE;
@@ -127,4 +134,14 @@ void tcapeeop ()
 void tcapbeep ()
 {
   ttputc (BEL);
+}
+
+void tcapboldon ()
+{
+  tputs (MD, 1, ttputc);
+}
+
+void tcapboldoff ()
+{
+  tputs (ME, 1, ttputc);
 }

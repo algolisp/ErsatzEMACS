@@ -47,7 +47,6 @@ LINE* lalloc (int used)
 {
   LINE *lp;
   int size;
-  char *malloc ();
 
   size = (used + NBLOCK - 1) & ~(NBLOCK - 1);
   if (size == 0)	       /* Assume that an empty */
@@ -285,6 +284,68 @@ int lnewline ()
   return (TRUE);
 }
 
+int lnewlinei ()
+{
+  WINDOW *wp;
+  char *cp1, *cp2;
+  LINE *lp1, *lp2;
+  int doto;
+
+  lchange (WFHARD);
+  lp1 = curwp->w_dotp;	       /* Get the address and */
+  doto = curwp->w_doto;	       /* offset of "." */
+  if ((lp2 = lalloc (doto)) == NULL)	/* New first half line */
+    return (FALSE);
+  cp1 = &lp1->l_text[0];       /* Shuffle text around */
+  cp2 = &lp2->l_text[0];
+  while (cp1 != &lp1->l_text[doto])
+    *cp2++ = *cp1++;
+  cp2 = &lp1->l_text[0];
+  while (cp1 != &lp1->l_text[lp1->l_used])
+    *cp2++ = *cp1++;
+  lp1->l_used -= doto;
+  lp2->l_bp = lp1->l_bp;
+  lp1->l_bp = lp2;
+  lp2->l_bp->l_fp = lp2;
+  lp2->l_fp = lp1;
+  wp = wheadp;		       /* Windows */
+  while (wp != NULL)
+    {
+      if (wp->w_linep == lp1)
+	wp->w_linep = lp2;
+      if (wp->w_dotp == lp1)
+	{
+	  if (wp->w_doto < doto)
+	    wp->w_dotp = lp2;
+	  else
+	    wp->w_doto -= doto;
+	}
+      if (wp->w_markp == lp1)
+	{
+	  if (wp->w_marko < doto)
+	    wp->w_markp = lp2;
+	  else
+	    wp->w_marko -= doto;
+	}
+      wp = wp->w_wndp;
+    }
+  {
+    int i;
+    
+    for (i = 0; i < lp2->l_used; i++)
+      {
+	char c;
+
+	c = lp2->l_text[i];
+	if (c == ' ' || c == '\t')
+	  linsert (1, c);
+	else
+	  break;
+      }
+  }
+  return (TRUE);
+}
+
 /*
  * This function deletes "n" bytes, starting at dot. It understands how do
  * deal with end of lines, etc. It returns TRUE if all of the characters were
@@ -469,8 +530,6 @@ void kdelete ()
  */
 int kinsert (int c)
 {
-  char *realloc ();
-  char *malloc ();
   char *nbufp;
 
   if (kused == ksize)

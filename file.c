@@ -3,10 +3,12 @@
  * All details about the reading and writing of the disk are in "fileio.c"
  */
 
-#include <string.h>		/* strncpy(3) */
+#include <string.h>		/* copy_string(3) */
 #include "estruct.h"
 #include "edef.h"
 
+extern int utf8_length (char c);
+extern void copy_string (char *to, char *from, int n);
 extern int mlreply (char *prompt, char *buf, int nbuf);
 extern int swbuffer (BUFFER *bp);
 extern void mlwrite ();
@@ -155,7 +157,7 @@ int readin (char fname[])
   if ((s = bclear (bp)) != TRUE) /* Might be old */
     return (s);
   bp->b_flag &= ~(BFTEMP | BFCHG);
-  strncpy (bp->b_fname, fname, NFILEN);
+  copy_string (bp->b_fname, fname, NFILEN);
   if ((s = ffropen (fname)) == FIOERR) /* Hard file open */
     goto out;
   if (s == FIOFNF)
@@ -229,8 +231,17 @@ void makename (char bname[], char fname[])
   while (cp1 != &fname[0] && cp1[-1] != '/')
     --cp1;
   cp2 = &bname[0];
-  while (cp2 != &bname[NBUFN - 1] && *cp1 != 0 && *cp1 != ';')
-    *cp2++ = *cp1++;
+  while (cp2 != &bname[NBUFN - 1]
+	 && *cp1 != 0 && *cp1 != ';')
+    {
+      int i, u;
+
+      u = utf8_length (*cp1);
+      if (u > bname + NBUFN - 1 - cp2)
+	break;
+      for (i = 0; i < u; i++)
+	*cp2++ = *cp1++;
+    }
   *cp2 = 0;
 }
 
@@ -250,7 +261,7 @@ int filewrite (int f, int n)
     return (s);
   if ((s = writeout (fname)) == TRUE)
     {
-      strncpy (curbp->b_fname, fname, NFILEN);
+      copy_string (curbp->b_fname, fname, NFILEN);
       curbp->b_flag &= ~BFCHG;
       wp = wheadp;		/* Update mode lines */
       while (wp != NULL)
@@ -351,9 +362,9 @@ int filename (int f, int n)
   if ((s = mlreply ("Name: ", fname, NFILEN)) == ABORT)
     return (s);
   if (s == FALSE)
-    strncpy (curbp->b_fname, "", 1);
+    copy_string (curbp->b_fname, "", 1);
   else
-    strncpy (curbp->b_fname, fname, NFILEN);
+    copy_string (curbp->b_fname, fname, NFILEN);
   wp = wheadp;			/* update mode lines */
   while (wp != NULL)
     {

@@ -83,6 +83,7 @@ typedef struct BUFFER
   char b_flag;			/* Flags */
   char b_fname[NFILEN];		/* File name */
   char b_bname[NBUFN];		/* Buffer name */
+  int b_progmode;
 } BUFFER;
 
 #define BFTEMP	0x01		/* Internal temporary buffer */
@@ -135,6 +136,7 @@ typedef struct
 {
   int t_nrow;			/* Number of rows */
   int t_ncol;			/* Number of columns */
+  int t_nlinebuf;
   int t_margin;			/* min margin for extended lines */
   int t_scrsiz;			/* size of scroll region " */
   void (*t_open) ();		/* Open terminal at the start */
@@ -147,6 +149,8 @@ typedef struct
   void (*t_eeop) ();		/* Erase to end of page */
   void (*t_beep) ();		/* Beep */
   void (*t_rev) ();		/* set reverse video state */
+  void (*t_boldon) ();		/* set reverse video state */
+  void (*t_boldoff) ();		/* set reverse video state */
 } TERM;
 
 /* structure for the table of initial key bindings */

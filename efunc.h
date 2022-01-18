@@ -48,6 +48,7 @@ extern int newline ();	       /* Insert CR-LF */
 extern int openline ();	       /* Open up a blank line */
 extern int quote ();	       /* Insert literal */
 extern int backword ();	       /* Backup by words */
+extern int completeword ();       /* Complete words */
 extern int forwword ();	       /* Advance by words */
 extern int forwdel ();	       /* Forward delete */
 extern int backdel ();	       /* Backward delete */
@@ -74,3 +75,4 @@ extern int nextbuffer ();      /* switch to the next buffer */
 extern int forwhunt ();	       /* hunt forward for next match */
 extern int backhunt ();	       /* hunt backwards for next match */
 extern int extendedcmd ();     /* parse ANSI/VT100 extended keys  */
+extern int toggleprog ();       /* Complete words */

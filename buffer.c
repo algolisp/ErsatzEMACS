@@ -5,10 +5,12 @@
  */
 
 #include <stdlib.h>		/* free(3), malloc(3) */
-#include <string.h>		/* strncpy(3) */
+#include <string.h>		/* copy_string(3) */
 #include "estruct.h"
 #include "edef.h"
 
+extern void clearpscreen ();
+extern void copy_string (char *to, char *from, int n);
 extern int mlreply (char *prompt, char *buf, int nbuf);
 extern int readin (char fname[]);
 extern void mlwrite ();
@@ -64,7 +66,7 @@ int swbuffer (BUFFER *bp)
       curwp->w_doto = bp->b_doto;
       curwp->w_markp = bp->b_markp;
       curwp->w_marko = bp->b_marko;
-      return (TRUE);
+      goto l;
     }
   wp = wheadp;			/* Look for old */
   while (wp != 0)
@@ -79,6 +81,8 @@ int swbuffer (BUFFER *bp)
 	}
       wp = wp->w_wndp;
     }
+ l:
+  clearpscreen ();
   return (TRUE);
 }
 
@@ -196,7 +200,7 @@ int namebuffer (int f, int n)
       bp = bp->b_bufp;		/* onward */
     }
 
-  strncpy (curbp->b_bname, bufn, NBUFN); /* copy buffer name to structure */
+  copy_string (curbp->b_bname, bufn, NBUFN); /* copy buffer name to structure */
   curwp->w_flag |= WFMODE;		 /* make mode line replot */
   mlerase ();
   return (TRUE);
@@ -266,7 +270,7 @@ int makelist ()
   blistp->b_flag &= ~BFCHG;	/* Don't complain! */
   if ((s = bclear (blistp)) != TRUE) /* Blow old text away */
     return (s);
-  strncpy (blistp->b_fname, "", 1);
+  copy_string (blistp->b_fname, "", 1);
   if (addline ("AC    Size Buffer	  File") == FALSE ||
       addline ("-- ------- ------	  ----") == FALSE)
     return (FALSE);
@@ -457,8 +461,9 @@ BUFFER* bfind (char *bname, int cflag, int bflag)
       bp->b_flag = (char)bflag;
       bp->b_nwnd = 0;
       bp->b_linep = lp;
-      strncpy (bp->b_fname, "", 1);
-      strncpy (bp->b_bname, bname, NBUFN);
+      bp->b_progmode = 0;
+      copy_string (bp->b_fname, "", 1);
+      copy_string (bp->b_bname, bname, NBUFN);
       lp->l_fp = lp;
       lp->l_bp = lp;
     }

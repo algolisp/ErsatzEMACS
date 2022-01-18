@@ -95,7 +95,16 @@ int backchar (int f, int n)
 	  curwp->w_flag |= WFMOVE;
 	}
       else
-	curwp->w_doto--;
+	{
+	  int x;
+	  LINE *l;
+
+	  l = curwp->w_dotp;
+	  x = curwp->w_doto - 1;
+	  while ((lgetc (l, x) & 0xc0) == 0x80)
+	    x--;
+	  curwp->w_doto = x;
+	}
     }
   return (TRUE);
 }
@@ -121,7 +130,16 @@ int forwchar (int f, int n)
 	  curwp->w_flag |= WFMOVE;
 	}
       else
-	curwp->w_doto++;
+	{
+	  int x;
+	  LINE *l;
+
+	  l = curwp->w_dotp;
+	  x = curwp->w_doto + 1;
+	  while ((lgetc (l, x) & 0xc0) == 0x80)
+	    x++;
+	  curwp->w_doto = x;
+	}
     }
   return (TRUE);
 }

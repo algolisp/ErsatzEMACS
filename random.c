@@ -6,11 +6,14 @@
 #include "estruct.h"
 #include "edef.h"
 
+extern int lnewlinei ();
+extern int utf8_length (int c);
 extern void mlwrite ();
 extern void lchange (int flag);
 extern int lnewline ();
 extern int linsert (int n, int c);
 extern int backchar (int f, int n);
+extern int forwchar (int f, int n);
 extern void kdelete ();
 extern int ldelete (int f, int n);
 extern int kremove (int k);
@@ -210,7 +213,7 @@ int newline (int f, int n)
   /* insert some lines */
   while (n--)
     {
-      if ((s = lnewline ()) != TRUE)
+      if ((s = lnewlinei ()) != TRUE)
 	return (s);
     }
   return (TRUE);
@@ -224,6 +227,8 @@ int newline (int f, int n)
  */
 int forwdel (int f, int n)
 {
+  int s, i, c;
+
   if (n < 0)
     return (backdel (f, -n));
   if (f != FALSE)
@@ -232,7 +237,13 @@ int forwdel (int f, int n)
 	kdelete ();
       thisflag |= CFKILL;
     }
-  return (ldelete (n, f));
+  for (i = 0; i < n; i++)
+    {
+      c = lgetc (curwp->w_dotp, curwp->w_doto);
+      if ((s = ldelete (utf8_length (c), f)) != TRUE)
+	return s;
+    }
+  return s;
 }
 
 /*
@@ -243,7 +254,7 @@ int forwdel (int f, int n)
  */
 int backdel (int f, int n)
 {
-  int s;
+  int s, i, x, m;
 
   if (n < 0)
     return (forwdel (f, -n));
@@ -253,8 +264,15 @@ int backdel (int f, int n)
 	kdelete ();
       thisflag |= CFKILL;
     }
-  if ((s = backchar (f, n)) == TRUE)
-    s = ldelete (n, f);
+  m = 0;
+  for (i = 0; i < n; i++)
+    {
+      x = curwp->w_doto;
+      if ((s = backchar (f, 1)) != TRUE)
+	break;
+      m += (x > curwp->w_doto) ? x - curwp->w_doto : 1;
+    }
+  ldelete (m, f);
   return (s);
 }
 

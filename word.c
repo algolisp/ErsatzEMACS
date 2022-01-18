@@ -4,6 +4,8 @@
  * paragraph mode commands, they are likely to be put in this file
  */
 
+#include <string.h>
+#include <ctype.h>
 #include "estruct.h"
 #include "edef.h"
 
@@ -26,6 +28,8 @@ int delfword (int f, int n);
 int delbword (int f, int n);
 int inword ();
 int fillpara (int f, int n);
+
+char wordbuf[NLINE];
 
 /*
  * Move the cursor backward by "n" words. All of the details of motion are
@@ -200,31 +204,39 @@ int capword (int f, int n)
  */
 int delfword (int f, int n)
 {
-  LINE *dotp;
-  int size, doto;
+  LINE *l;
+  int x, size, d;
 
   if (n < 0)
     return (FALSE);
-  dotp = curwp->w_dotp;
-  doto = curwp->w_doto;
+  l = curwp->w_dotp;
+  d = curwp->w_doto;
   size = 0;
   while (n--)
     {
       while (inword () != FALSE)
 	{
+	  x = curwp->w_doto;
 	  if (forwchar (FALSE, 1) == FALSE)
 	    return (FALSE);
-	  ++size;
+	  if (curwp->w_doto <= x)
+	    size += 1;
+	  else
+	    size += curwp->w_doto - x;
 	}
       while (inword () == FALSE)
 	{
+	  x = curwp->w_doto;
 	  if (forwchar (FALSE, 1) == FALSE)
 	    return (FALSE);
-	  ++size;
+	  if (curwp->w_doto <= x)
+	    size += 1;
+	  else
+	    size += curwp->w_doto - x;
 	}
     }
-  curwp->w_dotp = dotp;
-  curwp->w_doto = doto;
+  curwp->w_dotp = l;
+  curwp->w_doto = d;
   return (ldelete (size, TRUE));
 }
 
@@ -235,30 +247,44 @@ int delfword (int f, int n)
  */
 int delbword (int f, int n)
 {
-  int size;
+  int size, x;
 
   if (n < 0)
     return (FALSE);
+  x = curwp->w_doto;
   if (backchar (FALSE, 1) == FALSE)
     return (FALSE);
-  size = 0;
+  size = x - curwp->w_doto;
   while (n--)
     {
       while (inword () == FALSE)
 	{
+	  x = curwp->w_doto;
 	  if (backchar (FALSE, 1) == FALSE)
 	    return (FALSE);
-	  ++size;
+	  if (curwp->w_doto <= x)
+	    size += 1;
+	  else
+	    size += x - curwp->w_doto;
 	}
       while (inword () != FALSE)
 	{
+	  x = curwp->w_doto;
 	  if (backchar (FALSE, 1) == FALSE)
 	    return (FALSE);
-	  ++size;
+	  if (curwp->w_doto <= x)
+	    size += 1;
+	  else
+	    size += x - curwp->w_doto;
 	}
     }
+  x = curwp->w_doto;
   if (forwchar (FALSE, 1) == FALSE)
     return (FALSE);
+  if (curwp->w_doto <= x)
+    size -= 1;
+  else
+    size -= curwp->w_doto - x;
   return (ldelete (size, TRUE));
 }
 
@@ -280,6 +306,8 @@ int inword ()
   if (c >= '0' && c <= '9')
     return (TRUE);
   if (c == '$' || c == '_')	/* For identifiers */
+    return (TRUE);
+  if ((c & 0x80) != 0)
     return (TRUE);
   return (FALSE);
 }
@@ -371,4 +399,99 @@ int fillpara (int f, int n)
     }
   /* and add a last newline for the end of our new paragraph */
   return (lnewline ());
+}
+
+int completeword (int f, int n)
+{
+  static LINE *l, *cl;
+  static int b, d, cd, x;
+  int xd, xe, xx;
+
+  if (curwp->w_dotp != l || curwp->w_doto != b + x)
+    {
+      cl = l = curwp->w_dotp;
+      b = d = curwp->w_doto;
+      while (isspace (l->l_text[b]) && b != 0)
+	b--;
+      while (!isspace (l->l_text[b]) && b != 0)
+	b--;
+      if (b != 0)
+	b++;
+      cd = b;
+      xx = 0;
+    }
+  else
+    {
+      curwp->w_dotp = l;
+      curwp->w_doto = d;
+      xx = x - (d - b);
+    }
+
+  if (b == d)
+    return FALSE;
+
+ again:
+  x = 0;
+  xd = cd;
+  if (xd != 0)
+    xd--;
+  do
+    {
+      if (xd == 0)
+	goto l;
+      while (isspace (cl->l_text[xd]) && xd != 0)
+	xd--;
+      xe = xd + 1;
+      while (!isspace (cl->l_text[xd]) && xd != 0)
+	xd--;
+      if (isspace (cl->l_text[xd]))
+	xd++;
+      if (strncmp (l->l_text + b, cl->l_text + xd, d - b) == 0
+	  && xe - xd != d - b)
+	{
+	  if (!(cl == l && xd == b))
+	    x = xe - xd;
+	  break;
+	}
+      if (xd > 0)
+	xd--;
+      continue;
+    l:
+      cl = lback (cl);
+      xd = cl->l_used;
+      if (xd > 0)
+	xd--;
+    }
+  while (!(cl == l && xd == b));
+  
+  curwp->w_dotp = l;
+  curwp->w_doto = d;
+
+  if (x != 0)
+    {
+      int k, i, w;
+      
+      k = d - b;
+      w = x - k;
+      if (w > NLINE)
+	w = NLINE;
+      strncpy (wordbuf, cl->l_text + xd + k, w);
+      if (d + w <= curwp->w_dotp->l_used
+	  && strncmp (wordbuf, curwp->w_dotp->l_text + d, w) == 0)
+	{
+	  cd = xd;
+	  goto again;
+	}
+      ldelete (xx, 0);
+      for (i = 0; i < w; i++)
+	linsert (1, wordbuf[i]);
+    }
+  else
+    {
+      ldelete (xx, 0);
+    }
+  if (l != curwp->w_dotp)
+    cl = l = curwp->w_dotp;
+  cd = xd;
+  return TRUE;
 }
