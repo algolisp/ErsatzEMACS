@@ -1,0 +1,6254 @@
+# This is a shell archive.  Save it in a file, remove anything before
+# this line, and then unpack it by entering "sh file".  Note, it may
+# create directories; files and directories will be owned by you and
+# have default permissions.
+#
+# This archive contains:
+#
+#	README
+#	Makefile
+#	ERSATZ.keys
+#	ee.1
+#	ChangeLog
+#	estruct.h
+#	edef.h
+#	efunc.h
+#	ebind.h
+#	basic.c
+#	buffer.c
+#	display.c
+#	file.c
+#	fileio.c
+#	line.c
+#	main.c
+#	random.c
+#	region.c
+#	search.c
+#	tcap.c
+#	termio.c
+#	window.c
+#	word.c
+#
+echo x - README
+sed 's/^X//' >README << 'END-of-README'
+XThis shar file contains the source to a microemacs-derived text editor
+Xthat I have been personally hacking on for over a decade.
+X
+XOriginally this was MicroEMACS 3.6 as released to mod.sources and the
+XPublic Domain by Daniel Lawrence in 1986, and was itself based on the
+Xwork of Steve Wilhite and George Jones to MicroEMACS 2.0 (then also
+Xpublic domain) by Dave Conroy. I would like to reiterate Lawrence's
+Xthanks to them for writing such nice, well structured and documented
+Xcode.
+X
+X"Ersatz-Emacs", as I call it today, is the above text editor throughly
+Xcleansed of routines and features that I personally never use. It is
+Xalso an editor MINIX-creator Andy Tanenbaum could describe as "fitting
+Xinside a student's brain" (namely, mine).
+X
+XThis source code should compile cleanly on any "modern" UN*X system
+Xwith a termcap/curses library. This release has been tested with
+XNetBSD and various Linux systems, although in the past when it was
+Xstill mostly MicroEMACS, proto-Ersatz-Emacs was an editor of choice on
+XSunOS, Solaris, Xenix, Minix/i386, and AIX. Supporting these and
+Xsimilar systems should not be difficult.
+X
+XI encourage people to personalise this very simple editor to their own
+Xrequirements. Please send any useful bug reports and fixes back to me,
+Xbut I'm not really interested in incorporating new features unless it
+Xsimplifies the program further. Feel free to do a code-fork and
+Xdistribute your own perfect text editor.
+X
+XThe title "Ersatz" comes from the category Richard Stallman uses in
+XMIT AI Memo 519a to describe those editors that are a surface-deep
+Ximitation (key bindings) of "real" ITS Emacs. If you are familiar with
+Xany Emacs-variant editor, you should have few problems with Ersatz.
+X
+XAll source code of this program is in the Public Domain. I am a rabid
+XStallmanite weenie, but it would be improper to publish this under a
+Xdifferent licence than it was given to me with.
+X
+X-- 
+XChris Baird,, <cjb@brushtail.apana.org.au>
+END-of-README
+echo x - Makefile
+sed 's/^X//' >Makefile << 'END-of-Makefile'
+X# The name to install the editor and documentation under. Long-time microemacs
+X# users might prefer "me" or "uemacs" instead.
+XEXEC=ee
+X
+XCFLAGS=-Wall -O2
+X# To be /really/ fanatical on the executible's size...
+X#CFLAGS=-Os -fomit-frame-pointer -malign-loops=0 -malign-jumps=0 -malign-functions=0 -Wall
+X
+X# Uncomment to force the screen size, in situtations were it is desirable or
+X# if your system lacks the TIOCGWINSZ ioctl.
+X#DUMBCONS= -DFORCE_COLS=80 -DFORCE_ROWS=24
+X
+X# NetBSD, Linux, and nearly all other POSIX-based enviroments
+XLFLAGS= -ltermcap
+X# Try this on some older systems
+X#LFLAGS= -lcurses
+X# For very early Linux
+X#LFLAGS= -lbsd
+X
+X# If you should change DOCDIR, be certain to update the path mentioned
+X# in the man page.
+XPREFIX= /export
+XDOCDIR= ${PREFIX}/share
+XBINDIR=	${PREFIX}/bin
+XMANDIR=	${PREFIX}/man/man1
+X
+XEXTRA=	README Makefile ERSATZ.keys ee.1 ChangeLog
+X
+XHFILES=	estruct.h edef.h efunc.h ebind.h
+X
+XCFILES=	basic.c buffer.c display.c file.c fileio.c line.c main.c \
+X	random.c region.c search.c tcap.c termio.c window.c word.c
+X
+XOFILES=	basic.o buffer.o display.o file.o fileio.o line.o main.o \
+X	random.o region.o search.o tcap.o termio.o window.o word.o
+X
+Xall:	$(OFILES)
+X	$(CC) $(CFLAGS) $(OFILES) -o $(EXEC) $(LFLAGS)
+X
+Xinstall: all
+X	install -c -m 0755 -o bin -g bin -s $(EXEC) $(BINDIR)
+X	install -c -m 0444 -o bin -g bin ERSATZ.keys $(DOCDIR)
+X	install -c -m 0644 -o bin -g bin ee.1 $(MANDIR)/$(EXEC).1
+X
+Xclean:
+X	rm -f *.o *~ *.core *.bak ersatz.shar $(EXEC)
+X
+Xbackup:
+X	-mv -f backup01.tar.gz backup02.tar.gz
+X	-mv -f backup00.tar.gz backup01.tar.gz
+X	tar zcf backup00.tar.gz $(CFILES) $(HFILES) $(EXTRA)
+X
+Xshar:	clean
+X	shar $(EXTRA) $(HFILES) $(CFILES) >ersatz.shar
+X
+Xfloppy:
+X	tar cvf /dev/fd0a $(EXTRA) $(CFILES) $(HFILES)
+X
+Xbasic.o: basic.c estruct.h edef.h
+Xbuffer.o: buffer.c estruct.h edef.h
+Xdisplay.o: display.c estruct.h edef.h
+Xfile.o: file.c estruct.h edef.h
+Xfileio.o: fileio.c estruct.h
+Xline.o: line.c estruct.h edef.h
+Xmain.o: main.c estruct.h edef.h efunc.h ebind.h
+Xrandom.o: random.c estruct.h edef.h
+Xregion.o: region.c estruct.h edef.h
+Xsearch.o: search.c estruct.h edef.h
+Xtcap.o: tcap.c estruct.h edef.h
+X	$(CC) $(CFLAGS) $(DUMBCONS) -c $<
+Xtermio.o: termio.c
+Xwindow.o: window.c estruct.h edef.h
+Xword.o: word.c estruct.h edef.h
+END-of-Makefile
+echo x - ERSATZ.keys
+sed 's/^X//' >ERSATZ.keys << 'END-of-ERSATZ.keys'
+X		       Ersatz Emacs (2000/09/14)
+X
+XM-  means to use the <ESC> key prior to using another key
+X^A  means to use the control key at the same time as the 'A' key
+X
+X------------------------------------------------------------------------------
+X			  MOVING THE CURSOR
+X
+X^F   Forward character   		M-F    Forward word
+X^B   Backward character  		M-B    Backward word
+X^N   Next line				M-P    Front of paragraph
+X^P   Previous line			M-N    End of paragraph
+X^A   Front of line			M-< or [HOME] Start of file
+X^E   End of line			M-> or [END] End of file
+X^V or [Page Down] Scroll down
+XM-V or [Page Up] Scroll up		Arrow keys are active
+X
+X------------------------------------------------------------------------------
+X			 DELETING & INSERTING
+X
+X<-   Delete previous character	        M-<-   Delete previous word
+X^D   Delete next character		M-D    Delete next word
+X^K   Delete to end of line		^O     Insert line
+X
+X------------------------------------------------------------------------------
+X		       FORMATTING & TRANSPOSING
+X
+XM-U  UPPERCASE word			M-C  Capitalize word
+XM-L  lowercase word			^T   Transpose characters
+X^Q   Quote next key, so that control codes may be entered into text.
+XM-Q  Format paragraph so that text is left-justified between margins.
+X^X F Set the right margin for paragraph formatting to the current position of
+X     the cursor.
+X
+X------------------------------------------------------------------------------
+X			      SEARCHING
+X
+X^S   Search forward from cursor position. Type in a string and end it with
+X     ESC. Either case matches.
+X^R   As above, but reverse search from cursor position.
+X
+X------------------------------------------------------------------------------
+X			      REPLACING
+X
+XM-R  Replace all instances of first typed-in string with second typed-in
+X     string. End each string with ESC.
+XM-%  Replace with query. Answer with:
+X	Y   replace & continue		N   no replacement & continue
+X	!   replace the rest		?   Get a list of options
+X	.   exit and return to entry point
+X	^G,'q' or <return> exit and remain at current location
+X
+X------------------------------------------------------------------------------
+X			  COPYING AND MOVING
+X
+X^@ or M-<spacebar> Set mark at current position.
+X^W   Delete region.
+XM-W  Copy region to kill buffer.
+X^Y   Yank back kill buffer at cursor.
+X
+XA region is defined as the area between this mark and the current cursor
+Xposition. The kill buffer is the text which has been most recently deleted or
+Xcopied.
+X
+XGenerally, the procedure for copying or moving text is:
+X1) Mark out region using M-<spacebar> at the beginning and move the cursor to
+X   the end.
+X2) Delete it (with ^W) or copy it (with M-W) into the kill buffer.
+X3) Move the cursor to the desired location and yank it back (with ^Y).
+X
+X------------------------------------------------------------------------------
+X			   MULTIPLE BUFFERS
+X
+XA buffer contains a COPY of a document being edited, and must be saved for
+Xchanges to be kept. Many buffers may be activated at once.
+X
+X^X B  Switch to another buffer.
+X^X ^B Show buffer directory in a window (^X 1 to remove).
+X^X K  Delete a non-displayed buffer.
+X^X X  Switch to next buffer in buffer list.
+X^X N  Change the filename associated with the buffer.
+XM-N   Change the name of the buffer.
+X
+X------------------------------------------------------------------------------
+X			  READING FROM DISK
+X
+X^X^F  Find file; read into a new buffer created from filename.
+X      (This is the usual way to edit a new file.)
+X^X^R  Read file into current buffer, erasing its previous contents.
+X      No new buffer will be created.
+X^X^I  Insert file into current buffer at cursor's location.
+X
+X------------------------------------------------------------------------------
+X			    SAVING TO DISK
+X
+X^X^S  Save current buffer to disk, using the buffer's filename as the name of
+X      the disk file. Any disk file of that name will be overwritten.
+X^X^W  Write current buffer to disk. Type in a new filename at the prompt to
+X      write to; it will also become the current buffer's filename.
+X
+X------------------------------------------------------------------------------
+X			   MULTIPLE WINDOWS
+X
+XMany windows may be visible at once on the screen. Windows may show different
+Xparts of the same buffer, or each may display a different one.
+X
+X^X 2  Split the current window in two	^X 1   Show only current window
+X^X O  Move cursor to next window	^X ^   Enlarge current window
+XM-^V  Scroll other window down		M-^Z   Scroll other window up
+X
+X------------------------------------------------------------------------------
+X			       EXITING
+X
+X^X^C  Exit. Any unsaved files will require confirmation.
+XM-Z   Write out all changed buffers automatically and exit.
+X
+X------------------------------------------------------------------------------
+X				MACROS
+X
+X^X (  Start recording a keyboard macro. Typing ^G or an error aborts.
+X^X )  Stop recording macro.
+X^X E  Execute macro.
+X
+X------------------------------------------------------------------------------
+X			 REPEAT & NUMBER PREFIX
+X
+X^U<number> or M-<number>
+X    Number prefix and universal repeat. May be followed by an integer
+X    (default = 4) and repeats the next command that many times.
+X    Exceptions follow.
+X^U<number>^L
+X    Reposition the cursor to a particular screen row; i.e., ^U0^L moves the
+X    cursor and the line it is on to the top of the screen. Negative numbers
+X    are from the bottom of the screen.
+X^U<number>M-G
+X    Go to line <number>. Note this is different behavour to GNU Emacs.
+X^U<number>^X F
+X    Set the right margin to column <number> for paragraph formatting.
+X^U<number>^X^
+X    Enlarge a split window by <number> rows. A negative number shrinks the
+X    window.
+X
+X------------------------------------------------------------------------------
+X			     SPECIAL KEYS
+X
+X^G   Cancel current command.
+X^L   Redraws the screen completely.
+X^X = Position report; displays line number, buffer size, etc.
+X
+X------------------------------------------------------------------------------
+END-of-ERSATZ.keys
+echo x - ee.1
+sed 's/^X//' >ee.1 << 'END-of-ee.1'
+X.\" All source code and documentation to 'Ersatz Emacs' is in the Public
+X.\" Domain, as were all the original sources I used. I might be a rabid
+X.\" Stallmanite weenie, but it would be improper to publish this under a
+X.\" difference licence than it was given to me with.
+X.\" -- Chris Baird,, <cjb@brushtail.apana.org.au>
+X.\"
+X.Dd September 11, 2000
+X.Os Miscellaneous\ Software
+X.Dt EE 1
+X.Sh NAME
+X.Nm ee
+X.Nd Ersatz Emacs, the simple text editor
+X.Sh SYNOPSIS
+X.Nm ee
+X.Op Ar
+X.Sh DESCRIPTION
+XErsatz Emacs is a very minimal imitation of the famous
+X.Tn GNU Emacs
+Xeditor. Unlike most popular Emacs derivatives, Ersatz strives to use as little
+Xsystem resources as possible and be simple enough for the casual programmer to
+Xunderstand, yet still include all the functionality required for most text
+Xediting jobs. You are encouraged to study the software sources and add any
+Xmissing
+X.Qq essential
+Xfeatures to produce your own perfect editor.
+X.Pp
+XIf invoked with no file arguments, the editor creates a
+X.Qq main
+Xbuffer that should be renamed
+X.Ic ( C-x n )
+Xand written to disk
+X.Ic ( C-x C-s )
+Xif the user intends to preserve the contents.
+X.Sh ENVIRONMENT
+X.Ev Em TERM
+Xinforms the editor to capabilities of the user's terminal. Also the values of
+X.Ev Em TERMCAP , TERMPATH ,
+Xand
+X.Ev Em HOME
+Xmust be sane for
+X.Xr termcap 5
+Xto function properly.
+X.Sh FILES
+XNone, aside from those implied by
+X.Xr termcap 5 .
+X.Pp
+XYour system manager should have copied the supplied printer-ready chart of key
+Xbindings to
+X.Pa /usr/local/share/ERSATZ.keys .
+XCarry this with you at all times until everything is permanent etched in
+Xwetware. One could also learn much from the tutorial in-built to
+X.Tn GNU Emacs ,
+Xas Ersatz supports many
+X.Qq standard
+Xbindings.
+X.Sh DIAGNOSTICS
+X.Bl -ohang
+X.It Em Unbelievable screen size
+XThe terminal options (see
+X.Xr termios 4 )
+Xhave undefined column or row size information, and is usually a sign of a
+Xbroken configuration somewhere. A temporary fix on UN*X is to type at the
+Xshell:
+X.Ic stty cols 80 rows 24
+X.It Em Environment variable TERM not defined
+XAs it says. The majority of users would have TERM = vt100 or
+Xthereabouts.
+X.It Em Insufficient termcap (needs cl & cm abilities)
+XErsatz requires a terminal that can clear the screen and position the cursor. A
+Xserious system problem if not logged-in via a line-printer.
+X.It Em Terminal description too big
+X.It Em Can't read terminal capabilities
+X.It Em Can't set terminal mode
+X.It Em Can't restore terminal flags
+XAll the above are likely to involve a serious system problem.
+X.El
+X.Sh AUTHORS
+XErsatz is a derivative work of MicroEMACS 3.6, as released to mod.sources and
+Xthe Public Domain by Daniel Lawrence in 1986, and is itself based on the work
+Xof Steve Wilhite and George Jones to MicroEMACS 2.0 (then also public domain)
+Xby Dave Conroy.
+X.Pp
+XChris Baird <cjb@brushtail.apana.org.au> stripped out most of the features he
+Xpersonally never used from 3.6, played with it for twelve years, completed the
+Xkey-bindings chart, wrote a man-page, and produced what you see today. His
+Xadditions are in the Public Domain as well.
+X.Sh BUGS
+XNone known. There are however a few discrepancies in imitating
+X.Tn GNU Emacs .
+X.Pp
+XIf you should find a juicy bug, please email a good description to Chris. He
+Xhowever has little interest incorporating new features unless they repair
+Xserious problems or simplify the program further.
+X.Sh SECURITY CONSIDERATIONS
+XAs file writes are done 
+X.Qq over the top of
+Xthe existing file, the file ownership and permission bits are preserved,
+Xhowever if an error should occur during a save this may leave a damaged file on
+Xthe filesystem.
+X.Pp
+XHowever, be assured that Ersatz
+X.Em does not
+Xdo stupid things like automatic word-wrap.
+END-of-ee.1
+echo x - ChangeLog
+sed 's/^X//' >ChangeLog << 'END-of-ChangeLog'
+X2004-01-10  Chris Baird  <cjb@brushtail.apana.org.au>
+X
+X	* beginning of lint-ification.
+X	  Start work on making 64-bit clean.
+X
+X2001-01-09  Chris Baird  <cjb@brushtail.apana.org.au>
+X
+X	* removed unused NBIND/names[] definitions.
+X	
+X
+END-of-ChangeLog
+echo x - estruct.h
+sed 's/^X//' >estruct.h << 'END-of-estruct.h'
+X/* ESTRUCT: Structure and preprocesser */
+X
+X/* internal constants */
+X#define NFILEN	80		/* maximum # of bytes, file name */
+X#define NBUFN	16		/* maximum # of bytes, buffer name */
+X#define NLINE	512		/* maximum # of bytes, line */
+X#define NKBDM	256		/* maximum # of strokes, keyboard macro */
+X#define NPAT	80		/* maximum # of bytes, pattern */
+X#define HUGE	32700		/* Huge number for "impossible" row&col */
+X
+X#define METACH	0x1B		/* M- prefix, Control-[, ESC */
+X#define BELL	0x07		/* a bell character */
+X#define TAB	0x09		/* a tab character */
+X
+X#define CTRL	0x0100		/* Control flag, or'ed in */
+X#define META	0x0200		/* Meta flag, or'ed in */
+X#define CTLX	0x0400		/* ^X flag, or'ed in */
+X
+X#define FALSE	0		/* False, no, bad, etc */
+X#define TRUE	1		/* True, yes, good, etc */
+X#define ABORT	2		/* Death, ^G, abort, etc */
+X
+X#define FIOSUC	0		/* File I/O, success */
+X#define FIOFNF	1		/* File I/O, file not found */
+X#define FIOEOF	2		/* File I/O, end of file */
+X#define FIOERR	3		/* File I/O, error */
+X#define FIOLNG	4		/* line longer than allowed len */
+X
+X#define CFCPCN	0x0001		/* Last command was C-P, C-N */
+X#define CFKILL	0x0002		/* Last command was a kill */
+X
+X/*
+X * There is a window structure allocated for every active display window. The
+X * windows are kept in a big list, in top to bottom screen order, with the
+X * listhead at "wheadp". Each window contains its own values of dot and mark.
+X * The flag field contains some bits that are set by commands to guide
+X * redisplay; although this is a bit of a compromise in terms of decoupling,
+X * the full blown redisplay is just too expensive to run for every input
+X * character
+X */
+Xtypedef struct WINDOW
+X{
+X  struct WINDOW *w_wndp;	/* Next window */
+X  struct BUFFER *w_bufp;	/* Buffer displayed in window */
+X  struct LINE *w_linep;		/* Top line in the window */
+X  struct LINE *w_dotp;		/* Line containing "." */
+X  long w_doto;			/* Byte offset for "." */
+X  struct LINE *w_markp;		/* Line containing "mark" */
+X  long w_marko;			/* Byte offset for "mark" */
+X  char w_toprow;		/* Origin 0 top row of window */
+X  char w_ntrows;		/* # of rows of text in window */
+X  char w_force;			/* If NZ, forcing row */
+X  char w_flag;			/* Flags */
+X} WINDOW;
+X
+X#define WFFORCE 0x01	       /* Window needs forced reframe */
+X#define WFMOVE	0x02	       /* Movement from line to line */
+X#define WFEDIT	0x04	       /* Editing within a line */
+X#define WFHARD	0x08	       /* Better to a full display */
+X#define WFMODE	0x10	       /* Update mode line */
+X
+X/*
+X * Text is kept in buffers. A buffer header, described below, exists for every
+X * buffer in the system. The buffers are kept in a big list, so that commands
+X * that search for a buffer by name can find the buffer header. There is a
+X * safe store for the dot and mark in the header, but this is only valid if
+X * the buffer is not being displayed (that is, if "b_nwnd" is 0). The text for
+X * the buffer is kept in a circularly linked list of lines, with a pointer to
+X * the header line in "b_linep". Buffers may be "Inactive" which means the
+X * files accosiated with them have not been read in yet. These get read in at
+X * "use buffer" time
+X */
+Xtypedef struct BUFFER
+X{
+X  struct BUFFER *b_bufp;	/* Link to next BUFFER */
+X  struct LINE *b_dotp;		/* Link to "." LINE structure */
+X  long b_doto;			/* Offset of "." in above LINE */
+X  struct LINE *b_markp;		/* The same as the above two, */
+X  long b_marko;			/* but for the "mark" */
+X  struct LINE *b_linep;		/* Link to the header LINE */
+X  char b_active;		/* window activated flag */
+X  char b_nwnd;			/* Count of windows on buffer */
+X  char b_flag;			/* Flags */
+X  char b_fname[NFILEN];		/* File name */
+X  char b_bname[NBUFN];		/* Buffer name */
+X} BUFFER;
+X
+X#define BFTEMP	0x01		/* Internal temporary buffer */
+X#define BFCHG	0x02		/* Changed since last write */
+X
+X/*
+X * The starting position of a region, and the size of the region in
+X * characters, is kept in a region structure.  Used by the region commands
+X */
+Xtypedef struct
+X{
+X  struct LINE *r_linep;		/* Origin LINE address */
+X  long r_offset;		/* Origin LINE offset */
+X  long r_size;			/* Length in characters */
+X} REGION;
+X
+X/*
+X * All text is kept in circularly linked lists of "LINE" structures. These
+X * begin at the header line (which is the blank line beyond the end of the
+X * buffer). This line is pointed to by the "BUFFER". Each line contains a the
+X * number of bytes in the line (the "used" size), the size of the text array,
+X * and the text. The end of line is not stored as a byte; it's implied. Future
+X * additions will include update hints, and a list of marks into the line
+X */
+Xtypedef struct LINE
+X{
+X  struct LINE *l_fp;		/* Link to the next line */
+X  struct LINE *l_bp;		/* Link to the previous line */
+X  int l_size;			/* Allocated size */
+X  int l_used;			/* Used size */
+X  char l_text[1];		/* A bunch of characters */
+X} LINE;
+X
+X#define lforw(lp)	((lp)->l_fp)
+X#define lback(lp)	((lp)->l_bp)
+X#define lgetc(lp, n)	((lp)->l_text[(n)]&0xFF)
+X#define lputc(lp, n, c) ((lp)->l_text[(n)]=(c))
+X#define llength(lp)	((lp)->l_used)
+X
+X/*
+X * The editor communicates with the display using a high level interface. A
+X * "TERM" structure holds useful variables, and indirect pointers to routines
+X * that do useful operations. The low level get and put routines are here too.
+X * This lets a terminal, in addition to having non standard commands, have
+X * funny get and put character code too. The calls might get changed to
+X * "termp->t_field" style in the future, to make it possible to run more than
+X * one terminal type
+X */
+Xtypedef struct
+X{
+X  int t_nrow;			/* Number of rows */
+X  int t_ncol;			/* Number of columns */
+X  int t_margin;			/* min margin for extended lines */
+X  int t_scrsiz;			/* size of scroll region " */
+X  void (*t_open) ();		/* Open terminal at the start */
+X  void (*t_close) ();		/* Close terminal at end */
+X  int (*t_getchar) ();		/* Get character from keyboard */
+X  void (*t_putchar) ();		/* Put character to display */
+X  void (*t_flush) ();		/* Flush output buffers */
+X  void (*t_move) ();		/* Move the cursor, origin 0 */
+X  void (*t_eeol) ();		/* Erase to end of line */
+X  void (*t_eeop) ();		/* Erase to end of page */
+X  void (*t_beep) ();		/* Beep */
+X  void (*t_rev) ();		/* set reverse video state */
+X} TERM;
+X
+X/* structure for the table of initial key bindings */
+X
+Xtypedef struct
+X{
+X  short k_code;			/* Key code */
+X  int (*k_fp) ();		/* Routine to handle it */
+X} KEYTAB;
+END-of-estruct.h
+echo x - edef.h
+sed 's/^X//' >edef.h << 'END-of-edef.h'
+X#ifndef NULL
+X#define NULL ((void*)0)
+X#endif
+X
+X#ifdef	maindef
+X/*
+X * for MAIN.C
+X * initialized global definitions
+X */
+X
+Xshort kbdm[NKBDM] = {CTLX | ')'}; /* Macro */
+Xint fillcol = 72;		/* Current fill column */
+Xchar pat[NPAT];			/* Search pattern */
+Xchar rpat[NPAT];		/* replacement pattern */
+Xint revexist = FALSE;
+Xint eolexist = TRUE;		/* does clear to EOL exist */
+Xint sgarbf = TRUE;		/* TRUE if screen is garbage */
+Xint mpresf = FALSE;		/* TRUE if message in last line */
+X
+X/* uninitialized global definitions */
+X
+Xint currow;			/* Cursor row */
+Xint curcol;			/* Cursor column */
+Xint thisflag;			/* Flags, this command */
+Xint lastflag;			/* Flags, last command */
+Xint curgoal;			/* Goal for C-P, C-N */
+XWINDOW *curwp;			/* Current window */
+XBUFFER *curbp;			/* Current buffer */
+XWINDOW *wheadp;			/* Head of list of windows */
+XBUFFER *bheadp;			/* Head of list of buffers */
+XBUFFER *blistp;			/* Buffer for C-X C-B */
+Xshort *kbdmip;			/* Input pointer for above */
+Xshort *kbdmop;			/* Output pointer for above */
+X
+X#else
+X/*
+X * for all the other .C files
+X * initialized global external declarations
+X */
+X
+Xextern int fillcol;		/* Fill column */
+Xextern short kbdm[];		/* Holds kayboard macro data */
+Xextern char pat[];		/* Search pattern */
+Xextern char rpat[];		/* Replacement pattern */
+Xextern int eolexist;		/* does clear to EOL exist? */
+Xextern int revexist;		/* does reverse video exist? */
+Xextern char *modename[];	/* text names of modes */
+Xextern char modecode[];		/* letters to represent modes */
+Xextern KEYTAB keytab[];		/* key bind to functions table */
+Xextern int gmode;		/* global editor mode */
+Xextern int sgarbf;		/* State of screen unknown */
+Xextern int mpresf;		/* Stuff in message line */
+Xextern int clexec;		/* command line execution flag */
+X
+X/* initialized global external declarations */
+X
+Xextern int currow;		/* Cursor row */
+Xextern int curcol;		/* Cursor column */
+Xextern int thisflag;		/* Flags, this command */
+Xextern int lastflag;		/* Flags, last command */
+Xextern int curgoal;		/* Goal for C-P, C-N */
+Xextern WINDOW *curwp;		/* Current window */
+Xextern BUFFER *curbp;		/* Current buffer */
+Xextern WINDOW *wheadp;		/* Head of list of windows */
+Xextern BUFFER *bheadp;		/* Head of list of buffers */
+Xextern BUFFER *blistp;		/* Buffer for C-X C-B */
+Xextern short *kbdmip;		/* Input pointer for above */
+Xextern short *kbdmop;		/* Output pointer for above */
+X
+X#endif
+X
+X/* terminal table defined only in TERM.C */
+X
+X#ifndef	termdef
+Xextern TERM term;		/* Terminal information */
+X#endif
+END-of-edef.h
+echo x - efunc.h
+sed 's/^X//' >efunc.h << 'END-of-efunc.h'
+X/* EFUNC.H: function declarations and names
+X *
+X * This file list all the C code functions used. To add functions, declare it
+X * here in both the extern function list and the name binding table
+X */
+X
+Xextern int ctrlg ();	       /* Abort out of things */
+Xextern int quit ();	       /* Quit */
+Xextern int ctlxlp ();	       /* Begin macro */
+Xextern int ctlxrp ();	       /* End macro */
+Xextern int ctlxe ();	       /* Execute macro */
+Xextern int fileread ();	       /* Get a file, read only */
+Xextern int filefind ();	       /* Get a file, read write */
+Xextern int filewrite ();       /* Write a file */
+Xextern int filesave ();	       /* Save current file */
+Xextern int filename ();	       /* Adjust file name */
+Xextern int getccol ();	       /* Get current column */
+Xextern int gotobol ();	       /* Move to start of line */
+Xextern int forwchar ();	       /* Move forward by characters */
+Xextern int gotoeol ();	       /* Move to end of line */
+Xextern int backchar ();	       /* Move backward by characters */
+Xextern int forwline ();	       /* Move forward by lines */
+Xextern int backline ();	       /* Move backward by lines */
+Xextern int forwpage ();	       /* Move forward by pages */
+Xextern int backpage ();	       /* Move backward by pages */
+Xextern int gotobob ();	       /* Move to start of buffer */
+Xextern int gotoeob ();	       /* Move to end of buffer */
+Xextern int setfillcol ();      /* Set fill column */
+Xextern int setmark ();	       /* Set mark */
+Xextern int forwsearch ();      /* Search forward */
+Xextern int backsearch ();      /* Search backwards */
+Xextern int sreplace ();	       /* search and replace */
+Xextern int qreplace ();	       /* search and replace w/query */
+Xextern int showcpos ();	       /* Show the cursor position */
+Xextern int nextwind ();	       /* Move to the next window */
+Xextern int prevwind ();	       /* Move to the previous window */
+Xextern int onlywind ();	       /* Make current window only one */
+Xextern int splitwind ();       /* Split current window */
+Xextern int enlargewind ();     /* Enlarge display window */
+Xextern int shrinkwind ();      /* Shrink window */
+Xextern int listbuffers ();     /* Display list of buffers */
+Xextern int usebuffer ();       /* Switch a window to a buffer */
+Xextern int killbuffer ();      /* Make a buffer go away */
+Xextern int refresh ();	       /* Refresh the screen */
+Xextern int twiddle ();	       /* Twiddle characters */
+Xextern int tab ();	       /* Insert tab */
+Xextern int newline ();	       /* Insert CR-LF */
+Xextern int openline ();	       /* Open up a blank line */
+Xextern int quote ();	       /* Insert literal */
+Xextern int backword ();	       /* Backup by words */
+Xextern int forwword ();	       /* Advance by words */
+Xextern int forwdel ();	       /* Forward delete */
+Xextern int backdel ();	       /* Backward delete */
+Xextern int killtext ();	       /* Kill forward */
+Xextern int yank ();	       /* Yank back from killbuffer */
+Xextern int upperword ();       /* Upper case word */
+Xextern int lowerword ();       /* Lower case word */
+Xextern int capword ();	       /* Initial capitalize word */
+Xextern int delfword ();	       /* Delete forward word */
+Xextern int delbword ();	       /* Delete backward word */
+Xextern int killregion ();      /* Kill region */
+Xextern int copyregion ();      /* Copy region to kill buffer */
+Xextern int quickexit ();       /* low keystroke style exit */
+Xextern int gotoline ();	       /* go to a numbered line */
+Xextern int namebuffer ();      /* rename the current buffer */
+Xextern int gotobop ();	       /* go to begining/paragraph */
+Xextern int gotoeop ();	       /* go to end/paragraph */
+Xextern int fillpara ();	       /* fill current paragraph */
+Xextern int deskey ();	       /* describe a key's binding */
+Xextern int insfile ();	       /* insert a file */
+Xextern int scrnextup ();       /* scroll next window back */
+Xextern int scrnextdw ();       /* scroll next window down */
+Xextern int nextbuffer ();      /* switch to the next buffer */
+Xextern int forwhunt ();	       /* hunt forward for next match */
+Xextern int backhunt ();	       /* hunt backwards for next match */
+Xextern int extendedcmd ();     /* parse ANSI/VT100 extended keys  */
+END-of-efunc.h
+echo x - ebind.h
+sed 's/^X//' >ebind.h << 'END-of-ebind.h'
+X/*
+X * This table is *roughly* in ASCII order, left to right across the
+X * characters of the command. This expains the funny location of the
+X * control-X commands.
+X */
+X
+XKEYTAB keytab[] = {
+X  {CTRL | '@', setmark},
+X  {CTRL | 'A', gotobol},
+X  {CTRL | 'B', backchar},
+X  {CTRL | 'D', forwdel},
+X  {CTRL | 'E', gotoeol},
+X  {CTRL | 'F', forwchar},
+X  {CTRL | 'G', ctrlg},
+X  {CTRL | 'H', backdel},
+X  {CTRL | 'I', tab},
+X  {CTRL | 'K', killtext},
+X  {CTRL | 'L', refresh},
+X  {CTRL | 'M', newline},
+X  {CTRL | 'N', forwline},
+X  {CTRL | 'O', openline},
+X  {CTRL | 'P', backline},
+X  {CTRL | 'Q', quote},
+X  {CTRL | 'R', backsearch},
+X  {CTRL | 'S', forwsearch},
+X  {CTRL | 'T', twiddle},
+X  {CTRL | 'V', forwpage},
+X  {CTRL | 'W', killregion},
+X  {CTRL | 'Y', yank},
+X  {CTLX | '(', ctlxlp},
+X  {CTLX | ')', ctlxrp},
+X  {CTLX | '1', onlywind},
+X  {CTLX | '2', splitwind},
+X  {CTLX | '=', showcpos},
+X  {CTLX | 'B', usebuffer},
+X  {CTLX | 'E', ctlxe},
+X  {CTLX | 'F', setfillcol},
+X  {CTLX | 'K', killbuffer},
+X  {CTLX | 'N', filename},
+X  {CTLX | 'O', nextwind},
+X  {CTLX | 'X', nextbuffer},
+X  {CTLX | '^', enlargewind},
+X  {CTLX | CTRL | 'B', listbuffers},
+X  {CTLX | CTRL | 'C', quit},
+X  {CTLX | CTRL | 'F', filefind},
+X  {CTLX | CTRL | 'I', insfile},
+X  {CTLX | CTRL | 'R', fileread},
+X  {CTLX | CTRL | 'S', filesave},
+X  {CTLX | CTRL | 'W', filewrite},
+X  {META | ' ', setmark},
+X  {META | '%', qreplace},
+X  {META | '.', setmark},
+X  {META | '<', gotobob},
+X  {META | '>', gotoeob},
+X  {META | 'B', backword},
+X  {META | 'C', capword},
+X  {META | 'D', delfword},
+X  {META | 'F', forwword},
+X  {META | 'G', gotoline},		/* non-standard */
+X  {META | 'L', lowerword},
+X  {META | 'N', gotoeop},
+X  {META | 'P', gotobop},
+X  {META | 'Q', fillpara},
+X  {META | 'R', sreplace},
+X  {META | 'U', upperword},
+X  {META | 'V', backpage},
+X  {META | 'W', copyregion},
+X  {META | 'Z', quickexit},
+X  {META | 0x7F, delbword},
+X  {META | CTRL | 'H', delbword},
+X  {META | CTRL | 'N', namebuffer},
+X  {META | CTRL | 'V', scrnextdw},
+X  {META | CTRL | 'Z', scrnextup},	/* non-standard */
+X  {0x7F, backdel},
+X  {META | '[', extendedcmd},
+X  {META | 'O', extendedcmd},
+X  {0, 0}
+X};
+END-of-ebind.h
+echo x - basic.c
+sed 's/^X//' >basic.c << 'END-of-basic.c'
+X/*
+X * The routines in this file move the cursor around on the screen. They
+X * compute a new value for the cursor, then adjust ".". The display code
+X * always updates the cursor location, so only moves between lines, or
+X * functions that adjust the top line in the window and invalidate the
+X * framing, are hard.
+X */
+X
+X#include "estruct.h"
+X#include "edef.h"
+X
+Xextern int getccol (int bflg);
+Xextern int inword ();
+Xextern void mlwrite ();
+X
+Xint forwchar (int f, int n);
+Xint backchar (int f, int n);
+Xint forwline (int f, int n);
+Xint backline (int f, int n);
+Xint gotobop (int f, int n);
+Xint gotoeop (int f, int n);
+Xint forwpage (int f, int n);
+Xint backpage (int f, int n);
+X
+X/*
+X * This routine, given a pointer to a LINE, and the current cursor goal
+X * column, return the best choice for the offset. The offset is returned.
+X * Used by "C-N" and "C-P".
+X */
+Xlong getgoal (LINE *dlp)
+X{
+X  int col, newcol, dbo, c;
+X
+X  col = 0;
+X  dbo = 0;
+X  while (dbo != llength (dlp))
+X    {
+X      c = lgetc (dlp, dbo);
+X      newcol = col;
+X      if (c == '\t')
+X	newcol |= 0x07;
+X      else if (c < 0x20 || c == 0x7F)
+X	++newcol;
+X      ++newcol;
+X      if (newcol > curgoal)
+X	break;
+X      col = newcol;
+X      ++dbo;
+X    }
+X  return (dbo);
+X}
+X
+X/*
+X * Move the cursor to the
+X * beginning of the current line.
+X * Trivial.
+X */
+X/* ARGSUSED0 */
+Xint gotobol (int f, int n)
+X{
+X  curwp->w_doto = 0;
+X  return (TRUE);
+X}
+X
+X/*
+X * Move the cursor to the end of the current line. Trivial. No errors.
+X */
+X/* ARGSUSED0 */
+Xint gotoeol (int f, int n)
+X{
+X  curwp->w_doto = llength (curwp->w_dotp);
+X  return (TRUE);
+X}
+X
+X/*
+X * Move the cursor backwards by "n" characters. If "n" is less than zero call
+X * "forwchar" to actually do the move. Otherwise compute the new cursor
+X * location. Error if you try and move out of the buffer. Set the flag if the
+X * line pointer for dot changes.
+X */
+Xint backchar (int f, int n)
+X{
+X  LINE *lp;
+X
+X  if (n < 0)
+X    return (forwchar (f, -n));
+X  while (n--)
+X    {
+X      if (curwp->w_doto == 0)
+X	{
+X	  if ((lp = lback (curwp->w_dotp)) == curbp->b_linep)
+X	    return (FALSE);
+X	  curwp->w_dotp = lp;
+X	  curwp->w_doto = llength (lp);
+X	  curwp->w_flag |= WFMOVE;
+X	}
+X      else
+X	curwp->w_doto--;
+X    }
+X  return (TRUE);
+X}
+X
+X/*
+X * Move the cursor forwards by "n" characters. If "n" is less than zero call
+X * "backchar" to actually do the move. Otherwise compute the new cursor
+X * location, and move ".". Error if you try and move off the end of the
+X * buffer. Set the flag if the line pointer for dot changes.
+X */
+Xint forwchar (int f, int n)
+X{
+X  if (n < 0)
+X    return (backchar (f, -n));
+X  while (n--)
+X    {
+X      if (curwp->w_doto == llength (curwp->w_dotp))
+X	{
+X	  if (curwp->w_dotp == curbp->b_linep)
+X	    return (FALSE);
+X	  curwp->w_dotp = lforw (curwp->w_dotp);
+X	  curwp->w_doto = 0;
+X	  curwp->w_flag |= WFMOVE;
+X	}
+X      else
+X	curwp->w_doto++;
+X    }
+X  return (TRUE);
+X}
+X
+X/* move to a particular line. argument (n) must be a positive integer for this
+X * to actually do anything
+X */
+Xint gotoline (int f, int n)
+X{
+X  if (n < 1)		       /* if a bogus argument...then leave */
+X    return (FALSE);
+X
+X  /* first, we go to the start of the buffer */
+X  curwp->w_dotp = lforw (curbp->b_linep);
+X  curwp->w_doto = 0;
+X  return (forwline (f, n - 1));
+X}
+X
+X/*
+X * Goto the beginning of the buffer. Massive adjustment of dot. This is
+X * considered to be hard motion; it really isn't if the original value of dot
+X * is the same as the new value of dot. Normally bound to "M-<".
+X */
+X/* ARGSUSED0 */
+Xint gotobob (int f, int n)
+X{
+X  curwp->w_dotp = lforw (curbp->b_linep);
+X  curwp->w_doto = 0;
+X  curwp->w_flag |= WFHARD;
+X  return (TRUE);
+X}
+X
+X/*
+X * Move to the end of the buffer. Dot is always put at the end of the file
+X * (ZJ). The standard screen code does most of the hard parts of update.
+X * Bound to "M->".
+X */
+X/* ARGSUSED0 */
+Xint gotoeob (int f, int n)
+X{
+X  curwp->w_dotp = curbp->b_linep;
+X  curwp->w_doto = 0;
+X  curwp->w_flag |= WFHARD;
+X  return (TRUE);
+X}
+X
+X/*
+X * Move forward by full lines. If the number of lines to move is less than
+X * zero, call the backward line function to actually do it. The last command
+X * controls how the goal column is set. Bound to "C-N". No errors are possible.
+X */
+Xint forwline (int f, int n)
+X{
+X  LINE *dlp;
+X
+X  if (n < 0)
+X    return (backline (f, -n));
+X  if ((lastflag & CFCPCN) == 0)/* Reset goal if last */
+X    curgoal = getccol (FALSE); /* not C-P or C-N */
+X  thisflag |= CFCPCN;
+X  dlp = curwp->w_dotp;
+X  while (n-- && dlp != curbp->b_linep)
+X    dlp = lforw (dlp);
+X  curwp->w_dotp = dlp;
+X  curwp->w_doto = getgoal (dlp);
+X  curwp->w_flag |= WFMOVE;
+X  return (TRUE);
+X}
+X
+X/*
+X * This function is like "forwline", but goes backwards. The scheme is exactly
+X * the same. Check for arguments that are less than zero and call your
+X * alternate. Figure out the new line and call "movedot" to perform the
+X * motion. No errors are possible. Bound to "C-P".
+X */
+Xint backline (int f, int n)
+X{
+X  LINE *dlp;
+X
+X  if (n < 0)
+X    return (forwline (f, -n));
+X  if ((lastflag & CFCPCN) == 0)/* Reset goal if the */
+X    curgoal = getccol (FALSE); /* last isn't C-P, C-N */
+X  thisflag |= CFCPCN;
+X  dlp = curwp->w_dotp;
+X  while (n-- && lback (dlp) != curbp->b_linep)
+X    dlp = lback (dlp);
+X  curwp->w_dotp = dlp;
+X  curwp->w_doto = getgoal (dlp);
+X  curwp->w_flag |= WFMOVE;
+X  return (TRUE);
+X}
+X
+X/* go back to the begining of the current paragraph here we look for a
+X * <NL><NL> or <NL><TAB> or <NL><SPACE> combination to delimit the begining of
+X * a paragraph
+X */
+Xint gotobop (int f, int n)
+X{
+X  int suc;			/* success of last backchar */
+X
+X  if (n < 0)			/* the other way.. */
+X    return (gotoeop (f, -n));
+X
+X  while (n-- > 0)
+X    {				/* for each one asked for */
+X      /* first scan back until we are in a word */
+X      suc = backchar (FALSE, 1);
+X      while (!inword () && suc)
+X	suc = backchar (FALSE, 1);
+X      curwp->w_doto = 0;	/* and go to the B-O-Line */
+X
+X      /* and scan back until we hit a <NL><NL> or <NL><TAB> or a <NL><SPACE> */
+X      while (lback (curwp->w_dotp) != curbp->b_linep)
+X	if (llength (curwp->w_dotp) != 0 &&
+X	    lgetc (curwp->w_dotp, curwp->w_doto) != TAB &&
+X	    lgetc (curwp->w_dotp, curwp->w_doto) != ' ')
+X	  curwp->w_dotp = lback (curwp->w_dotp);
+X	else
+X	  break;
+X
+X      /* and then forward until we are in a word */
+X      suc = forwchar (FALSE, 1);
+X      while (suc && !inword ())
+X	suc = forwchar (FALSE, 1);
+X    }
+X  curwp->w_flag |= WFMOVE;	/* force screen update */
+X  return (TRUE);
+X}
+X
+X/* go forword to the end of the current paragraph here we look for a <NL><NL>
+X * or <NL><TAB> or <NL><SPACE> combination to delimit the begining of a
+X * paragraph
+X */
+Xint gotoeop (int f, int n)
+X{
+X  int suc;			/* success of last backchar */
+X
+X  if (n < 0)			/* the other way.. */
+X    return (gotobop (f, -n));
+X
+X  while (n-- > 0)
+X    {				/* for each one asked for */
+X      /* first scan forward until we are in a word */
+X      suc = forwchar (FALSE, 1);
+X      while (!inword () && suc)
+X	suc = forwchar (FALSE, 1);
+X      curwp->w_doto = 0;	/* and go to the B-O-Line */
+X      if (suc)			/* of next line if not at EOF */
+X	curwp->w_dotp = lforw (curwp->w_dotp);
+X
+X      /* and scan forword until hit a <NL><NL> or <NL><TAB> or a <NL><SPACE> */
+X      while (curwp->w_dotp != curbp->b_linep)
+X	{
+X	  if (llength (curwp->w_dotp) != 0 &&
+X	      lgetc (curwp->w_dotp, curwp->w_doto) != TAB &&
+X	      lgetc (curwp->w_dotp, curwp->w_doto) != ' ')
+X	    curwp->w_dotp = lforw (curwp->w_dotp);
+X	  else
+X	    break;
+X	}
+X
+X      /* and then backward until we are in a word */
+X      suc = backchar (FALSE, 1);
+X      while (suc && !inword ())
+X	{
+X	  suc = backchar (FALSE, 1);
+X	}
+X      curwp->w_doto = llength (curwp->w_dotp); /* and to the EOL */
+X    }
+X  curwp->w_flag |= WFMOVE;	/* force screen update */
+X  return (TRUE);
+X}
+X
+X/*
+X * Scroll forward by a specified number of lines, or by a full page if no
+X * argument. Bound to "C-V". The "2" in the arithmetic on the window size is
+X * the overlap; this value is the default overlap value in ITS EMACS. Because
+X * this zaps the top line in the display window, we have to do a hard update.
+X */
+Xint forwpage (int f, int n)
+X{
+X  LINE *lp;
+X
+X  if (f == FALSE)
+X    {
+X      n = curwp->w_ntrows - 2;	 /* Default scroll */
+X      if (n <= 0)		 /* Forget the overlap */
+X	n = 1;			 /* if tiny window */
+X    }
+X  else if (n < 0)
+X    return (backpage (f, -n));
+X  else			       /* Convert from pages */
+X    n *= curwp->w_ntrows;      /* to lines */
+X  lp = curwp->w_linep;
+X  while (n-- && lp != curbp->b_linep)
+X    lp = lforw (lp);
+X  curwp->w_linep = lp;
+X  curwp->w_dotp = lp;
+X  curwp->w_doto = 0;
+X  curwp->w_flag |= WFHARD;
+X  return (TRUE);
+X}
+X
+X/*
+X * This command is like "forwpage", but it goes backwards. The "2", like
+X * above, is the overlap between the two windows. The value is from the ITS
+X * EMACS manual. Bound to "M-V". We do a hard update for exactly the same
+X * reason.
+X */
+Xint backpage (int f, int n)
+X{
+X  LINE *lp;
+X
+X  if (f == FALSE)
+X    {
+X      n = curwp->w_ntrows - 2;	 /* Default scroll */
+X      if (n <= 0)		 /* Don't blow up if the window is tiny */
+X	n = 1;
+X    }
+X  else if (n < 0)
+X    return (forwpage (f, -n));
+X  else			       /* Convert from pages to lines */
+X    n *= curwp->w_ntrows;
+X  lp = curwp->w_linep;
+X  while (n-- && lback (lp) != curbp->b_linep)
+X    lp = lback (lp);
+X  curwp->w_linep = lp;
+X  curwp->w_dotp = lp;
+X  curwp->w_doto = 0;
+X  curwp->w_flag |= WFHARD;
+X  return (TRUE);
+X}
+X
+X/*
+X * Set the mark in the current window to the value of "." in the window. No
+X * errors are possible. Bound to "M-.".
+X */
+X/* ARGSUSED0 */
+Xint setmark (int f, int n)
+X{
+X  curwp->w_markp = curwp->w_dotp;
+X  curwp->w_marko = curwp->w_doto;
+X  mlwrite ("[Mark set]");
+X  return (TRUE);
+X}
+END-of-basic.c
+echo x - buffer.c
+sed 's/^X//' >buffer.c << 'END-of-buffer.c'
+X/*
+X * Buffer management. Some of the functions are internal, and some are actually
+X * attached to user keys. Like everyone else, they set hints for the display
+X * system.
+X */
+X
+X#include <stdlib.h>		/* free(3), malloc(3) */
+X#include <string.h>		/* strncpy(3) */
+X#include "estruct.h"
+X#include "edef.h"
+X
+Xextern int mlreply (char *prompt, char *buf, int nbuf);
+Xextern int readin (char fname[]);
+Xextern void mlwrite ();
+Xextern void mlerase ();
+Xextern int mlyesno (char *prompt);
+Xextern void lfree (LINE *lp);
+Xextern WINDOW *wpopup ();
+Xextern LINE *lalloc ();
+X
+Xint swbuffer (BUFFER *bp);
+Xint usebuffer (int f, int n);
+Xint nextbuffer (int f, int n);
+Xint killbuffer (int f, int n);
+Xint zotbuf (BUFFER *bp);
+Xint namebuffer (int f, int n);
+Xint listbuffers (int f, int n);
+Xint makelist ();
+Xvoid itoa (char buf[], int width, int num);
+Xint addline (char *text);
+Xint anycb ();
+XBUFFER* bfind (char *bname, int cflag, int bflag);
+Xint bclear (BUFFER *bp);
+X
+X/*
+X * make buffer BP current
+X */
+Xint swbuffer (BUFFER *bp)
+X{
+X  WINDOW *wp;
+X
+X  if (--curbp->b_nwnd == 0)
+X    {				/* Last use. */
+X      curbp->b_dotp = curwp->w_dotp;
+X      curbp->b_doto = curwp->w_doto;
+X      curbp->b_markp = curwp->w_markp;
+X      curbp->b_marko = curwp->w_marko;
+X    }
+X  curbp = bp;			/* Switch. */
+X  if (curbp->b_active != TRUE)
+X    {				/* buffer not active yet */
+X      /* read it in and activate it */
+X      readin (curbp->b_fname);
+X      curbp->b_dotp = lforw (curbp->b_linep);
+X      curbp->b_doto = 0;
+X      curbp->b_active = TRUE;
+X    }
+X  curwp->w_bufp = bp;
+X  curwp->w_linep = bp->b_linep;	/* For macros, ignored */
+X  curwp->w_flag |= WFMODE | WFFORCE | WFHARD; /* Quite nasty */
+X  if (bp->b_nwnd++ == 0)
+X    {				/* First use */
+X      curwp->w_dotp = bp->b_dotp;
+X      curwp->w_doto = bp->b_doto;
+X      curwp->w_markp = bp->b_markp;
+X      curwp->w_marko = bp->b_marko;
+X      return (TRUE);
+X    }
+X  wp = wheadp;			/* Look for old */
+X  while (wp != 0)
+X    {
+X      if (wp != curwp && wp->w_bufp == bp)
+X	{
+X	  curwp->w_dotp = wp->w_dotp;
+X	  curwp->w_doto = wp->w_doto;
+X	  curwp->w_markp = wp->w_markp;
+X	  curwp->w_marko = wp->w_marko;
+X	  break;
+X	}
+X      wp = wp->w_wndp;
+X    }
+X  return (TRUE);
+X}
+X
+X/*
+X * Attach a buffer to a window. The values of dot and mark come from the buffer
+X * if the use count is 0. Otherwise, they come from some other window.
+X */
+X/* ARGSUSED0 */
+Xint usebuffer (int f, int n)
+X{
+X  BUFFER *bp;
+X  char bufn[NBUFN];
+X  int s;
+X
+X  if ((s = mlreply ("Use buffer: ", bufn, NBUFN)) != TRUE)
+X    return (s);
+X  if ((bp = bfind (bufn, TRUE, 0)) == NULL)
+X    return (FALSE);
+X  return (swbuffer (bp));
+X}
+X
+X/* switch to the next buffer in the buffer list
+X */
+X/* ARGSUSED0 */
+Xint nextbuffer (int f, int n)
+X{
+X  BUFFER *bp;
+X
+X  bp = curbp->b_bufp;
+X  /* cycle through the buffers to find an eligable one */
+X  while ((bp == NULL) || (bp->b_flag & BFTEMP))
+X    {
+X      if (bp == NULL)
+X	bp = bheadp;
+X      else
+X	bp = bp->b_bufp;
+X    }
+X  return (swbuffer (bp));
+X}
+X
+X/*
+X * Dispose of a buffer, by name. Ask for the name. Look it up (don't get too
+X * upset if it isn't there at all!). Get quite upset if the buffer is being
+X * displayed. Clear the buffer (ask if the buffer has been changed). Then free
+X * the header line and the buffer header. Bound to "C-X K".
+X */
+X/* ARGSUSED0 */
+Xint killbuffer (int f, int n)
+X{
+X  BUFFER *bp;
+X  char bufn[NBUFN];
+X  int s;
+X
+X  if ((s = mlreply ("Kill buffer: ", bufn, NBUFN)) != TRUE)
+X    return (s);
+X  if ((bp = bfind (bufn, FALSE, 0)) == NULL) /* Easy if unknown */
+X    return (TRUE);
+X  return (zotbuf (bp));
+X}
+X
+X/* kill the buffer pointed to by bp
+X */
+Xint zotbuf (BUFFER *bp)
+X{
+X  BUFFER *bp1, *bp2;
+X  int s;
+X
+X  if (bp->b_nwnd != 0)
+X    {				/* Error if on screen */
+X      mlwrite ("Buffer is being displayed");
+X      return (FALSE);
+X    }
+X  if ((s = bclear (bp)) != TRUE) /* Blow text away */
+X    return (s);
+X  free (bp->b_linep);		/* Release header line */
+X  bp1 = 0;			/* Find the header */
+X  bp2 = bheadp;
+X  while (bp2 != bp)
+X    {
+X      bp1 = bp2;
+X      bp2 = bp2->b_bufp;
+X    }
+X  bp2 = bp2->b_bufp;		/* Next one in chain */
+X  if (bp1 == NULL)		/* Unlink it */
+X    bheadp = bp2;
+X  else
+X    bp1->b_bufp = bp2;
+X  free (bp);			/* Release buffer block */
+X  return (TRUE);
+X}
+X
+X/* Rename the current buffer
+X */
+X/* ARGSUSED0 */
+Xint namebuffer (int f, int n)
+X{
+X  BUFFER *bp;			/* pointer to scan through all buffers */
+X  char bufn[NBUFN];		/* buffer to hold buffer name */
+X
+X  /* prompt for and get the new buffer name */
+X ask:
+X  if (mlreply ("Change buffer name to: ", bufn, NBUFN) != TRUE)
+X    return (FALSE);
+X
+X  /* and check for duplicates */
+X  bp = bheadp;
+X  while (bp != 0)
+X    {
+X      if (bp != curbp)
+X	{
+X	  /* if the names the same */
+X	  if (strcmp (bufn, bp->b_bname) == 0)
+X	    goto ask;		/* try again */
+X	}
+X      bp = bp->b_bufp;		/* onward */
+X    }
+X
+X  strncpy (curbp->b_bname, bufn, NBUFN); /* copy buffer name to structure */
+X  curwp->w_flag |= WFMODE;		 /* make mode line replot */
+X  mlerase ();
+X  return (TRUE);
+X}
+X
+X/*
+X * List all of the active buffers. First update the special buffer that holds
+X * the list. Next make sure at least 1 window is displaying the buffer list,
+X * splitting the screen if this is what it takes. Lastly, repaint all of the
+X * windows that are displaying the list. Bound to "C-X C-B".
+X */
+X/* ARGSUSED0 */
+Xint listbuffers (int f, int n)
+X{
+X  WINDOW *wp;
+X  BUFFER *bp;
+X  int s;
+X
+X  if ((s = makelist ()) != TRUE)
+X    return (s);
+X  if (blistp->b_nwnd == 0)
+X    {				/* Not on screen yet */
+X      if ((wp = wpopup ()) == NULL)
+X	return (FALSE);
+X      bp = wp->w_bufp;
+X      if (--bp->b_nwnd == 0)
+X	{
+X	  bp->b_dotp = wp->w_dotp;
+X	  bp->b_doto = wp->w_doto;
+X	  bp->b_markp = wp->w_markp;
+X	  bp->b_marko = wp->w_marko;
+X	}
+X      wp->w_bufp = blistp;
+X      ++blistp->b_nwnd;
+X    }
+X  wp = wheadp;
+X  while (wp != 0)
+X    {
+X      if (wp->w_bufp == blistp)
+X	{
+X	  wp->w_linep = lforw (blistp->b_linep);
+X	  wp->w_dotp = lforw (blistp->b_linep);
+X	  wp->w_doto = 0;
+X	  wp->w_markp = 0;
+X	  wp->w_marko = 0;
+X	  wp->w_flag |= WFMODE | WFHARD;
+X	}
+X      wp = wp->w_wndp;
+X    }
+X  return (TRUE);
+X}
+X
+X/*
+X * This routine rebuilds the text in the special secret buffer that holds the
+X * buffer list. It is called by the list buffers command. Return TRUE if
+X * everything works. Return FALSE if there is an error (if there is no
+X * memory).
+X */
+Xint makelist ()
+X{
+X  BUFFER *bp;
+X  LINE *lp;
+X  char *cp1, *cp2;
+X  char b[7], line[128];
+X  int nbytes, s, c;
+X
+X  blistp->b_flag &= ~BFCHG;	/* Don't complain! */
+X  if ((s = bclear (blistp)) != TRUE) /* Blow old text away */
+X    return (s);
+X  strncpy (blistp->b_fname, "", 1);
+X  if (addline ("AC    Size Buffer	  File") == FALSE ||
+X      addline ("-- ------- ------	  ----") == FALSE)
+X    return (FALSE);
+X  bp = bheadp;
+X
+X  /* build line to report global mode settings */
+X  cp1 = &line[0];
+X  *cp1++ = ' ';
+X  *cp1++ = ' ';
+X  *cp1++ = ' ';
+X
+X  /* output the list of buffers */
+X  while (bp != 0)
+X    {
+X      if ((bp->b_flag & BFTEMP) != 0)
+X	{				/* Skip magic ones */
+X	  bp = bp->b_bufp;
+X	  continue;
+X	}
+X      cp1 = &line[0];		/* Start at left edge */
+X
+X      /* output status of ACTIVE flag (has the file been read in? */
+X      if (bp->b_active == TRUE)	 /* "@" if activated */
+X	*cp1++ = '@';
+X      else
+X	*cp1++ = ' ';
+X
+X      /* output status of changed flag */
+X      if ((bp->b_flag & BFCHG) != 0) /* "*" if changed */
+X	*cp1++ = '*';
+X      else
+X	*cp1++ = ' ';
+X      *cp1++ = ' ';		/* Gap */
+X
+X      nbytes = 0;			/* Count bytes in buf */
+X      lp = lforw (bp->b_linep);
+X      while (lp != bp->b_linep)
+X	{
+X	  nbytes += llength (lp) + 1;
+X	  lp = lforw (lp);
+X	}
+X      itoa (b, 6, nbytes);	/* 6 digit buffer size */
+X      cp2 = &b[0];
+X      while ((c = *cp2++) != 0)
+X	*cp1++ = (char)c;
+X      *cp1++ = ' ';		/* Gap */
+X      cp2 = &bp->b_bname[0];	/* Buffer name */
+X      while ((c = *cp2++) != 0)
+X	*cp1++ = (char)c;
+X      cp2 = &bp->b_fname[0];	/* File name */
+X      if (*cp2 != 0)
+X	{
+X	  while (cp1 < &line[2 + 1 + 5 + 1 + 6 + 1 + NBUFN]) /* XXX ??? */
+X	    *cp1++ = ' ';
+X	  while ((c = *cp2++) != 0)
+X	    {
+X	      if (cp1 < &line[128 - 1])
+X		*cp1++ = (char)c;
+X	    }
+X	}
+X      *cp1 = 0;			/* Add to the buffer */
+X      if (addline (line) == FALSE)
+X	return (FALSE);
+X      bp = bp->b_bufp;
+X    }
+X  return (TRUE);		/* All done */
+X}
+X
+Xvoid itoa (char buf[], int width, int num)
+X{
+X  buf[width] = 0;		/* End of string */
+X  while (num >= 10)
+X    {				/* Conditional digits */
+X      buf[--width] = (char)((num % 10) + '0');
+X      num /= 10;
+X    }
+X  buf[--width] = (char)(num + '0'); /* Always 1 digit */
+X  while (width != 0)		    /* Pad with blanks */
+X    buf[--width] = ' ';
+X}
+X
+X/*
+X * The argument "text" points to a string. Append this line to the buffer list
+X * buffer. Handcraft the EOL on the end. Return TRUE if it worked and FALSE if
+X * you ran out of room.
+X */
+Xint addline (char *text)
+X{
+X  LINE *lp;
+X  int ntext, i;
+X
+X  ntext = strlen (text);
+X  if ((lp = lalloc (ntext)) == NULL)
+X    return (FALSE);
+X  for (i = 0; i < ntext; ++i)
+X    lputc (lp, i, text[i]);
+X  blistp->b_linep->l_bp->l_fp = lp; /* Hook onto the end */
+X  lp->l_bp = blistp->b_linep->l_bp;
+X  blistp->b_linep->l_bp = lp;
+X  lp->l_fp = blistp->b_linep;
+X  if (blistp->b_dotp == blistp->b_linep) /* If "." is at the end */
+X    blistp->b_dotp = lp;	/* move it to new line */
+X  return (TRUE);
+X}
+X
+X/*
+X * Look through the list of buffers. Return TRUE if there are any changed
+X * buffers. Buffers that hold magic internal stuff are not considered; who
+X * cares if the list of buffer names is hacked. Return FALSE if no buffers
+X * have been changed.
+X */
+Xint anycb ()
+X{
+X  BUFFER *bp;
+X
+X  bp = bheadp;
+X  while (bp != NULL)
+X    {
+X      if ((bp->b_flag & BFTEMP) == 0 && (bp->b_flag & BFCHG) != 0)
+X	return (TRUE);
+X      bp = bp->b_bufp;
+X    }
+X  return (FALSE);
+X}
+X
+X/*
+X * Find a buffer, by name. Return a pointer to the BUFFER structure associated
+X * with it. If the named buffer is found, but is a TEMP buffer (like the
+X * buffer list) conplain. If the buffer is not found and the "cflag" is TRUE,
+X * create it. The "bflag" is the settings for the flags in in buffer.
+X */
+XBUFFER* bfind (char *bname, int cflag, int bflag)
+X{
+X  BUFFER *bp, *sb;
+X  LINE *lp;
+X
+X  bp = bheadp;
+X  while (bp != 0)
+X    {
+X      if (strcmp (bname, bp->b_bname) == 0)
+X	{
+X	  if ((bp->b_flag & BFTEMP) != 0)
+X	    {
+X	      mlwrite ("Cannot select builtin buffer");
+X	      return (0);
+X	    }
+X	  return (bp);
+X	}
+X      bp = bp->b_bufp;
+X    }
+X  if (cflag != FALSE)
+X    {
+X      if ((bp = (BUFFER *) malloc (sizeof (BUFFER))) == NULL)
+X	return (0);
+X      if ((lp = lalloc (0)) == NULL)
+X	{
+X	  free (bp);
+X	  return (BUFFER*)0;
+X	}
+X      /* find the place in the list to insert this buffer */
+X      if (bheadp == NULL || strcmp (bheadp->b_bname, bname) > 0)
+X	{
+X	  /* insert at the begining */
+X	  bp->b_bufp = bheadp;
+X	  bheadp = bp;
+X	}
+X      else
+X	{
+X	  sb = bheadp;
+X	  while (sb->b_bufp != 0)
+X	    {
+X	      if (strcmp (sb->b_bufp->b_bname, bname) > 0)
+X		break;
+X	      sb = sb->b_bufp;
+X	    }
+X
+X	  /* and insert it */
+X	  bp->b_bufp = sb->b_bufp;
+X	  sb->b_bufp = bp;
+X	}
+X
+X      /* and set up the other buffer fields */
+X      bp->b_active = TRUE;
+X      bp->b_dotp = lp;
+X      bp->b_doto = 0;
+X      bp->b_markp = 0;
+X      bp->b_marko = 0;
+X      bp->b_flag = (char)bflag;
+X      bp->b_nwnd = 0;
+X      bp->b_linep = lp;
+X      strncpy (bp->b_fname, "", 1);
+X      strncpy (bp->b_bname, bname, NBUFN);
+X      lp->l_fp = lp;
+X      lp->l_bp = lp;
+X    }
+X  return (bp);
+X}
+X
+X/*
+X * This routine blows away all of the text in a buffer. If the buffer is
+X * marked as changed then we ask if it is ok to blow it away; this is to save
+X * the user the grief of losing text. The window chain is nearly always wrong
+X * if this gets called; the caller must arrange for the updates that are
+X * required. Return TRUE if everything looks good.
+X */
+Xint bclear (BUFFER *bp)
+X{
+X  LINE *lp;
+X  int s;
+X
+X  if ((bp->b_flag & BFTEMP) == 0 /* Not scratch buffer */
+X      && (bp->b_flag & BFCHG) != 0 /* Something changed */
+X      && (s = mlyesno ("Discard changes")) != TRUE)
+X    return (s);
+X  bp->b_flag &= ~BFCHG;		/* Not changed */
+X  while ((lp = lforw (bp->b_linep)) != bp->b_linep)
+X    lfree (lp);
+X  bp->b_dotp = bp->b_linep;	/* Fix "." */
+X  bp->b_doto = 0;
+X  bp->b_markp = 0;		/* Invalidate "mark" */
+X  bp->b_marko = 0;
+X  return (TRUE);
+X}
+END-of-buffer.c
+echo x - display.c
+sed 's/^X//' >display.c << 'END-of-display.c'
+X/*
+X * The functions in this file handle redisplay. There are two halves, the ones
+X * that update the virtual display screen, and the ones that make the physical
+X * display screen the same as the virtual display screen. These functions use
+X * hints that are left in the windows by the commands
+X */
+X
+X#include <string.h>
+X#include "estruct.h"
+X#include "edef.h"
+X
+Xextern int typahead ();
+Xextern int ctrlg ();
+X
+Xvoid movecursor (int row, int col);
+Xvoid mlerase ();
+Xvoid vtinit ();
+Xvoid vttidy ();
+Xvoid vtmove (int row, int col);
+Xvoid vtputc (int c);
+Xvoid vtpute (int c);
+Xvoid vteeol ();
+Xvoid update ();
+Xvoid updext ();
+Xvoid updateline (int row, char vline[], char pline[], short *flags);
+Xvoid modeline (WINDOW *wp);
+Xvoid upmode ();
+Xint mlyesno (char *prompt);
+Xint mlreplyt (char *prompt, char *buf, int nbuf, char eolchar);
+Xint mlreply (char *prompt, char *buf, int nbuf);
+Xvoid mlwrite ();
+Xvoid mlputs (char *s);
+Xvoid mlputi (int i, int r);
+Xvoid mlputli (long l, int r);
+X
+Xtypedef struct VIDEO {
+X  short v_flag;			/* Flags */
+X  char v_text[1];		/* Screen data */
+X} VIDEO;
+X
+X#define VFCHG	0x0001		/* Changed flag */
+X#define VFEXT	0x0002		/* extended (beyond column 80) */
+X#define VFREV	0x0004		/* reverse video status */
+X#define VFREQ	0x0008		/* reverse video request */
+X
+Xint vtrow = 0;			/* Row location of SW cursor */
+Xint vtcol = 0;			/* Column location of SW cursor */
+Xint ttrow = HUGE;		/* Row location of HW cursor */
+Xint ttcol = HUGE;		/* Column location of HW cursor */
+Xint lbound = 0;			/* leftmost column of line being displayed */
+X
+XVIDEO **vscreen;		/* Virtual screen */
+XVIDEO **pscreen;		/* Physical screen */
+X
+X/*
+X * Send a command to the terminal to move the hardware cursor to row "row" and
+X * column "col". The row and column arguments are origin 0. Optimize out
+X * random calls. Update "ttrow" and "ttcol".
+X */
+Xvoid movecursor (int row, int col)
+X{
+X  if (row != ttrow || col != ttcol)
+X    {
+X      ttrow = row;
+X      ttcol = col;
+X      (*term.t_move) (row, col);
+X    }
+X}
+X
+X/*
+X * Erase the message line. This is a special routine because the message line
+X * is not considered to be part of the virtual screen. It always works
+X * immediately; the terminal buffer is flushed via a call to the flusher.
+X */
+Xvoid mlerase ()
+X{
+X  int i;
+X
+X  movecursor (term.t_nrow, 0);
+X  if (eolexist == TRUE)
+X    (*term.t_eeol) ();
+X  else
+X    {
+X      for (i = 0; i < term.t_ncol - 1; i++)
+X	(*term.t_putchar) (' ');
+X      movecursor (term.t_nrow, 1);	  /* force the move! */
+X      movecursor (term.t_nrow, 0);
+X    }
+X  (*term.t_flush) ();
+X  mpresf = FALSE;
+X}
+X
+X/*
+X * Initialize the data structures used by the display code. The edge vectors
+X * used to access the screens are set up. The operating system's terminal I/O
+X * channel is set up. All the other things get initialized at compile time.
+X * The original window has "WFCHG" set, so that it will get completely redrawn
+X * on the first call to "update".
+X */
+Xvoid vtinit ()
+X{
+X  VIDEO *vp;
+X  char *malloc ();
+X  int i;
+X
+X  (*term.t_open) ();
+X  (*term.t_rev) (FALSE);
+X  vscreen = (VIDEO **) malloc (term.t_nrow * sizeof (VIDEO *));
+X
+X  if (vscreen == NULL)
+X    exit (1);
+X
+X  pscreen = (VIDEO **) malloc (term.t_nrow * sizeof (VIDEO *));
+X
+X  if (pscreen == NULL)
+X    exit (1);
+X
+X  for (i = 0; i < term.t_nrow; ++i)
+X    {
+X      vp = (VIDEO *) malloc (sizeof (VIDEO) + term.t_ncol);
+X
+X      if (vp == NULL)
+X	exit (1);
+X
+X      vp->v_flag = 0;
+X      vscreen[i] = vp;
+X      vp = (VIDEO *) malloc (sizeof (VIDEO) + term.t_ncol);
+X
+X      if (vp == NULL)
+X	exit (1);
+X
+X      vp->v_flag = 0;
+X      pscreen[i] = vp;
+X    }
+X}
+X
+X/*
+X * Clean up the virtual terminal system, in anticipation for a return to the
+X * operating system. Move down to the last line and clear it out (the next
+X * system prompt will be written in the line). Shut down the channel to the
+X * terminal.
+X */
+Xvoid vttidy ()
+X{
+X  mlerase ();
+X  movecursor (term.t_nrow, 0);
+X  (*term.t_close) ();
+X}
+X
+X/*
+X * Set the virtual cursor to the specified row and column on the virtual
+X * screen. There is no checking for nonsense values; this might be a good idea
+X * during the early stages.
+X */
+Xvoid vtmove (int row, int col)
+X{
+X  vtrow = row;
+X  vtcol = col;
+X}
+X
+X/*
+X * Write a character to the virtual screen. The virtual row and column are
+X * updated. If the line is too long put a "$" in the last column. This routine
+X * only puts printing characters into the virtual terminal buffers. Only
+X * column overflow is checked.
+X */
+Xvoid vtputc (int c)
+X{
+X  VIDEO *vp;
+X
+X  vp = vscreen[vtrow];
+X
+X  if (vtcol >= term.t_ncol)
+X    {
+X      vtcol = (vtcol + 0x07) & ~0x07;
+X      vp->v_text[term.t_ncol - 1] = '$';
+X    }
+X  else if (c == '\t')
+X    {
+X      do
+X	{
+X	  vtputc (' ');
+X	}
+X      while ((vtcol & 0x07) != 0);
+X    }
+X  else if (c < 0x20 || c == 0x7F)
+X    {
+X      vtputc ('^');
+X      vtputc (c ^ 0x40);
+X    }
+X  else
+X    vp->v_text[vtcol++] = c;
+X}
+X
+X/* put a character to the virtual screen in an extended line. If we are not
+X * yet on left edge, don't print it yet. check for overflow on the right
+X * margin
+X */
+Xvoid vtpute (int c)
+X{
+X  VIDEO *vp;
+X
+X  vp = vscreen[vtrow];
+X
+X  if (vtcol >= term.t_ncol)
+X    {
+X      vtcol = (vtcol + 0x07) & ~0x07;
+X      vp->v_text[term.t_ncol - 1] = '$';
+X    }
+X  else if (c == '\t')
+X    {
+X      do
+X	{
+X	  vtpute (' ');
+X	}
+X      while (((vtcol + lbound) & 0x07) != 0);
+X    }
+X  else if (c < 0x20 || c == 0x7F)
+X    {
+X      vtpute ('^');
+X      vtpute (c ^ 0x40);
+X    }
+X  else
+X    {
+X      if (vtcol >= 0)
+X	vp->v_text[vtcol] = c;
+X      ++vtcol;
+X    }
+X}
+X
+X/*
+X * [In the virtual screen] Erase from the end of the software cursor to the
+X * end of the line on which the software cursor is located.
+X */
+Xvoid vteeol ()
+X{
+X  VIDEO *vp;
+X
+X  vp = vscreen[vtrow];
+X  while (vtcol < term.t_ncol)
+X    vp->v_text[vtcol++] = ' ';
+X}
+X
+X/*
+X * Make sure that the display is right. This is a three part process. First,
+X * scan through all of the windows looking for dirty ones. Check the framing,
+X * and refresh the screen. Second, make sure that "currow" and "curcol" are
+X * correct for the current window. Third, make the virtual and physical
+X * screens the same
+X */
+Xvoid update ()
+X{
+X  VIDEO *vp1, *vp2;
+X  LINE *lp;
+X  WINDOW *wp;
+X  int i, j, c;
+X
+X  if (typahead())
+X    return;
+X
+X  /* update the reverse video flags for any mode lines out there */
+X  for (i = 0; i < term.t_nrow; ++i)
+X    vscreen[i]->v_flag &= ~VFREQ;
+X
+X  wp = wheadp;
+X  while (wp != NULL)
+X    {
+X      vscreen[wp->w_toprow + wp->w_ntrows]->v_flag |= VFREQ;
+X      wp = wp->w_wndp;
+X    }
+X
+X  wp = wheadp;
+X  while (wp != NULL)
+X    {
+X      /* Look at any window with update flags set on */
+X      if (wp->w_flag != 0)
+X	{
+X	  /* If not force reframe, check the framing */
+X	  if ((wp->w_flag & WFFORCE) == 0)
+X	    {
+X	      lp = wp->w_linep;
+X	      for (i = 0; i < wp->w_ntrows; ++i)
+X		{
+X		  if (lp == wp->w_dotp)
+X		    goto out;
+X		  if (lp == wp->w_bufp->b_linep)
+X		    break;
+X		  lp = lforw (lp);
+X		}
+X	    }
+X	  /* Not acceptable, better compute a new value for the line at the top
+X	   * of the window. Then set the "WFHARD" flag to force full redraw */
+X	  i = wp->w_force;
+X	  if (i > 0)
+X	    {
+X	      --i;
+X	      if (i >= wp->w_ntrows)
+X		i = wp->w_ntrows - 1;
+X	    }
+X	  else if (i < 0)
+X	    {
+X	      i += wp->w_ntrows;
+X	      if (i < 0)
+X		i = 0;
+X	    }
+X	  else
+X	    i = wp->w_ntrows / 2;
+X	  lp = wp->w_dotp;
+X	  while (i != 0 && lback (lp) != wp->w_bufp->b_linep)
+X	    {
+X	      --i;
+X	      lp = lback (lp);
+X	    }
+X	  wp->w_linep = lp;
+X	  wp->w_flag |= WFHARD;	   /* Force full */
+X
+X	out:
+X	  /* Try to use reduced update. Mode line update has its own special
+X	   * flag. The fast update is used if the only thing to do is within
+X	   * the line editing */
+X	  lp = wp->w_linep;
+X	  i = wp->w_toprow;
+X	  if ((wp->w_flag & ~WFMODE) == WFEDIT)
+X	    {
+X	      while (lp != wp->w_dotp)
+X		{
+X		  ++i;
+X		  lp = lforw (lp);
+X		}
+X	      vscreen[i]->v_flag |= VFCHG;
+X	      vtmove (i, 0);
+X	      for (j = 0; j < llength (lp); ++j)
+X		vtputc (lgetc (lp, j));
+X	      vteeol ();
+X	    }
+X	  else if ((wp->w_flag & (WFEDIT | WFHARD)) != 0)
+X	    {
+X	      while (i < wp->w_toprow + wp->w_ntrows)
+X		{
+X		  vscreen[i]->v_flag |= VFCHG;
+X		  vtmove (i, 0);
+X		  /* if line has been changed */
+X		  if (lp != wp->w_bufp->b_linep)
+X		    {
+X		      for (j = 0; j < llength (lp); ++j)
+X			vtputc (lgetc (lp, j));
+X		      lp = lforw (lp);
+X		    }
+X		  vteeol ();
+X		  ++i;
+X		}
+X	    }
+X	}
+X      if (wp->w_flag & WFMODE)
+X	modeline(wp);
+X      wp->w_flag = 0;
+X      wp->w_force = 0;
+X
+X      wp = wp->w_wndp;		/* and onward to the next window */
+X    }
+X
+X  /* Always recompute the row and column number of the hardware cursor. This
+X   * is the only update for simple moves */
+X  lp = curwp->w_linep;
+X  currow = curwp->w_toprow;
+X  while (lp != curwp->w_dotp)
+X    {
+X      ++currow;
+X      lp = lforw (lp);
+X    }
+X
+X  curcol = 0;
+X  i = 0;
+X  while (i < curwp->w_doto)
+X    {
+X      c = lgetc (lp, i++);
+X      if (c == '\t')
+X	curcol |= 0x07;
+X      else if (c < 0x20 || c == 0x7F)
+X	++curcol;
+X      ++curcol;
+X    }
+X  if (curcol >= term.t_ncol - 1)
+X    {				 /* extended line */
+X      /* flag we are extended and changed */
+X      vscreen[currow]->v_flag |= VFEXT | VFCHG;
+X      updext ();		 /* and output extended line */
+X    }
+X  else
+X    lbound = 0;			/* not extended line */
+X
+X  /* make sure no lines need to be de-extended because the cursor is no
+X   * longer on them */
+X
+X  wp = wheadp;
+X
+X  while (wp != NULL)
+X    {
+X      lp = wp->w_linep;
+X      i = wp->w_toprow;
+X
+X      while (i < wp->w_toprow + wp->w_ntrows)
+X	{
+X	  if (vscreen[i]->v_flag & VFEXT)
+X	    {
+X	      /* always flag extended lines as changed */
+X	      vscreen[i]->v_flag |= VFCHG;
+X	      if ((wp != curwp) || (lp != wp->w_dotp) ||
+X		  (curcol < term.t_ncol - 1))
+X		{
+X		  vtmove (i, 0);
+X		  for (j = 0; j < llength (lp); ++j)
+X		    vtputc (lgetc (lp, j));
+X		  vteeol ();
+X		  /* this line no longer is extended */
+X		  vscreen[i]->v_flag &= ~VFEXT;
+X		}
+X	    }
+X	  lp = lforw (lp);
+X	  ++i;
+X	}
+X      /* and onward to the next window */
+X      wp = wp->w_wndp;
+X    }
+X
+X  /* Special hacking if the screen is garbage. Clear the hardware screen, and
+X   * update your copy to agree with it. Set all the virtual screen change
+X   * bits, to force a full update */
+X  if (sgarbf != FALSE)
+X    {
+X      for (i = 0; i < term.t_nrow; ++i)
+X	{
+X	  vscreen[i]->v_flag |= VFCHG;
+X	  vp1 = pscreen[i];
+X	  for (j = 0; j < term.t_ncol; ++j)
+X	    vp1->v_text[j] = ' ';
+X	}
+X
+X      movecursor (0, 0);	 /* Erase the screen */
+X      (*term.t_eeop) ();
+X      sgarbf = FALSE;		 /* Erase-page clears */
+X      mpresf = FALSE;		 /* the message area */
+X    }
+X  /* Make sure that the physical and virtual displays agree. Unlike before,
+X   * the "updateline" code is only called with a line that has been updated
+X   * for sure */
+X  for (i = 0; i < term.t_nrow; ++i)
+X    {
+X      vp1 = vscreen[i];
+X
+X      /* for each line that needs to be updated, or that needs its reverse
+X       * video status changed, call the line updater */
+X      j = vp1->v_flag;
+X      if (((j & VFCHG) != 0) || (((j & VFREV) == 0) != ((j & VFREQ) == 0)))
+X	{
+X	  if (typahead ())
+X	    return;
+X	  vp2 = pscreen[i];
+X	  updateline (i, &vp1->v_text[0], &vp2->v_text[0], &vp1->v_flag);
+X	}
+X    }
+X
+X  /* Finally, update the hardware cursor and flush out buffers */
+X  movecursor (currow, curcol - lbound);
+X  (*term.t_flush) ();
+X}
+X
+X/* updext: update the extended line which the cursor is currently on at a
+X * column greater than the terminal width. The line will be scrolled right or
+X * left to let the user see where the cursor is
+X */
+Xvoid updext ()
+X{
+X  LINE *lp;			/* pointer to current line */
+X  int rcursor;			/* real cursor location */
+X  int j;			/* index into line */
+X
+X  /* calculate what column the real cursor will end up in */
+X  rcursor = ((curcol - term.t_ncol) % term.t_scrsiz) + term.t_margin;
+X  lbound = curcol - rcursor + 1;
+X
+X  /* scan through the line outputing characters to the virtual screen */
+X  /* once we reach the left edge */
+X  vtmove (currow, -lbound);	/* start scanning offscreen */
+X  lp = curwp->w_dotp;		/* line to output */
+X  for (j = 0; j < llength (lp); ++j) /* until the end-of-line */
+X    vtpute (lgetc (lp, j));
+X  /* truncate the virtual line */
+X  vteeol ();
+X  /* and put a '$' in column 1 */
+X  vscreen[currow]->v_text[0] = '$';
+X}
+X
+X/*
+X * Update a single line. This does not know how to use insert or delete
+X * character sequences; we are using VT52 functionality. Update the physical
+X * row and column variables. It does try an exploit erase to end of line.
+X */
+Xvoid updateline (int row, char vline[], char pline[], short *flags)
+X{
+X  char *cp1, *cp2, *cp3, *cp4, *cp5;
+X  int nbflag;			/* non-blanks to the right flag? */
+X  int rev;			/* reverse video flag */
+X  int req;			/* reverse video request flag */
+X
+X  /* set up pointers to virtual and physical lines */
+X  cp1 = &vline[0];
+X  cp2 = &pline[0];
+X
+X  /* if we need to change the reverse video status of the current line, we
+X   * need to re-write the entire line */
+X  rev = *flags & VFREV;
+X  req = *flags & VFREQ;
+X  if (rev != req)
+X    {
+X      movecursor (row, 0);	 /* Go to start of line */
+X      (*term.t_rev) (req != FALSE);	  /* set rev video if needed */
+X
+X      /* scan through the line and dump it to the screen and the virtual
+X       * screen array */
+X      cp3 = &vline[term.t_ncol];
+X      while (cp1 < cp3)
+X	{
+X	  (*term.t_putchar) (*cp1);
+X	  ++ttcol;
+X	  *cp2++ = *cp1++;
+X	}
+X      (*term.t_rev) (FALSE);	 /* turn rev video off */
+X
+X      /* update the needed flags */
+X      *flags &= ~VFCHG;
+X      if (req)
+X	*flags |= VFREV;
+X      else
+X	*flags &= ~VFREV;
+X      return;
+X    }
+X
+X  /* advance past any common chars at the left */
+X  while (cp1 != &vline[term.t_ncol] && cp1[0] == cp2[0])
+X    {
+X      ++cp1;
+X      ++cp2;
+X    }
+X
+X  /* This can still happen, even though we only call this routine on changed
+X   * lines. A hard update is always done when a line splits, a massive change
+X   * is done, or a buffer is displayed twice. This optimizes out most of the
+X   * excess updating. A lot of computes are used, but these tend to be hard
+X   * operations that do a lot of update, so I don't really care */
+X  /* if both lines are the same, no update needs to be done */
+X  if (cp1 == &vline[term.t_ncol])
+X    return;
+X
+X  /* find out if there is a match on the right */
+X  nbflag = FALSE;
+X  cp3 = &vline[term.t_ncol];
+X  cp4 = &pline[term.t_ncol];
+X
+X  while (cp3[-1] == cp4[-1])
+X    {
+X      --cp3;
+X      --cp4;
+X      if (cp3[0] != ' ')	 /* Note if any nonblank */
+X	nbflag = TRUE;		 /* in right match */
+X    }
+X
+X  cp5 = cp3;
+X
+X  if (nbflag == FALSE && eolexist == TRUE)
+X    {				/* Erase to EOL ? */
+X      while (cp5 != cp1 && cp5[-1] == ' ')
+X	--cp5;
+X      if (cp3 - cp5 <= 3)	/* Use only if erase is */
+X	cp5 = cp3;		/* fewer characters */
+X    }
+X  movecursor (row, cp1 - &vline[0]); /* Go to start of line */
+X
+X  while (cp1 != cp5)
+X    {				/* Ordinary */
+X      (*term.t_putchar) (*cp1);
+X      ++ttcol;
+X      *cp2++ = *cp1++;
+X    }
+X
+X  if (cp5 != cp3)
+X    {				/* Erase */
+X      (*term.t_eeol) ();
+X      while (cp1 != cp3)
+X	*cp2++ = *cp1++;
+X    }
+X  *flags &= ~VFCHG;		/* flag this line is changed */
+X}
+X
+X/*
+X * Redisplay the mode line for the window pointed to by the "wp". This is the
+X * only routine that has any idea of how the modeline is formatted. You can
+X * change the modeline format by hacking at this routine. Called by "update"
+X * any time there is a dirty window.
+X */
+Xvoid modeline (WINDOW *wp)
+X{
+X  BUFFER *bp;
+X  char tline[NLINE];		/* buffer for part of mode line */
+X  char *cp;
+X  int lchar;			/* character to draw line in buffer with */
+X  int c;
+X  int n;			/* cursor position count */
+X
+X  n = wp->w_toprow + wp->w_ntrows; /* Location */
+X  vscreen[n]->v_flag |= VFCHG; /* Redraw next time */
+X  vtmove (n, 0);	       /* Seek to right line */
+X  if (wp == curwp)	       /* mark the current buffer */
+X    lchar = '=';
+X  else
+X    if (revexist)
+X      lchar = ' ';
+X    else
+X      lchar = '-';
+X
+X  vtputc (lchar);
+X  bp = wp->w_bufp;
+X
+X  if ((bp->b_flag & BFCHG) != 0)	/* "*" if changed */
+X    vtputc ('*');
+X  else
+X    vtputc (lchar);
+X
+X  n = 2;
+X  strncpy (tline, " ErsatzEMACS ", 14);
+X
+X  cp = &tline[0];
+X  while ((c = *cp++) != 0)
+X    {
+X      vtputc (c);
+X      ++n;
+X    }
+X
+X  vtputc (lchar);
+X  vtputc (lchar);
+X  vtputc (' ');
+X  n += 3;
+X  cp = &bp->b_bname[0];
+X
+X  while ((c = *cp++) != 0)
+X    {
+X      vtputc (c);
+X      ++n;
+X    }
+X
+X  vtputc (' ');
+X  vtputc (lchar);
+X  vtputc (lchar);
+X  n += 3;
+X
+X  if (bp->b_fname[0] != 0)     /* File name */
+X    {
+X      vtputc (' ');
+X      ++n;
+X      cp = "File: ";
+X
+X      while ((c = *cp++) != 0)
+X	{
+X	  vtputc (c);
+X	  ++n;
+X	}
+X
+X      cp = &bp->b_fname[0];
+X
+X      while ((c = *cp++) != 0)
+X	{
+X	  vtputc (c);
+X	  ++n;
+X	}
+X
+X      vtputc (' ');
+X      ++n;
+X    }
+X
+X  while (n < term.t_ncol)      /* Pad to full width */
+X    {
+X      vtputc (lchar);
+X      ++n;
+X    }
+X}
+X
+X/* update all the mode lines
+X */
+Xvoid upmode ()
+X{
+X  WINDOW *wp;
+X
+X  wp = wheadp;
+X  while (wp != NULL)
+X    {
+X      wp->w_flag |= WFMODE;
+X      wp = wp->w_wndp;
+X    }
+X}
+X
+X/*
+X * Ask a yes or no question in the message line. Return either TRUE, FALSE, or
+X * ABORT. The ABORT status is returned if the user bumps out of the question
+X * with a ^G. Used any time a confirmation is required.
+X */
+Xint mlyesno (char *prompt)
+X{
+X  char c;			/* input character */
+X  char buf[NPAT];		/* prompt to user */
+X
+X  for (;;)
+X    {
+X      /* build and prompt the user */
+X      strncpy (buf, prompt, 60);
+X      strncat (buf, " [y/n]? ", 9);
+X      mlwrite (buf);
+X
+X      /* get the responce */
+X      c = (*term.t_getchar) ();
+X      if (c == BELL)		 /* Bail out! */
+X	return (ABORT);
+X      if (c == 'y' || c == 'Y')
+X	return (TRUE);
+X      if (c == 'n' || c == 'N')
+X	return (FALSE);
+X    }
+X}
+X
+X/* A more generalized prompt/reply function allowing the caller to specify the
+X * proper terminator. If the terminator is not a return ('\n') it will echo as
+X * "<NL>"
+X */
+Xint mlreplyt (char *prompt, char *buf, int nbuf, char eolchar)
+X{
+X  int cpos, i, c;
+X
+X  cpos = 0;
+X
+X  if (kbdmop != NULL)
+X    {
+X      while ((c = *kbdmop++) != '\0')
+X	buf[cpos++] = c;
+X      buf[cpos] = 0;
+X      if (buf[0] == 0)
+X	return (FALSE);
+X      return (TRUE);
+X    }
+X  mlwrite (prompt);
+X
+X  for (;;)
+X    {
+X      /* get a character from the user. if it is a <ret> change it to a <NL> */
+X      c = (*term.t_getchar) ();
+X      if (c == 0x0d)
+X	c = '\n';
+X
+X      if (c == eolchar)
+X	{
+X	  buf[cpos++] = 0;
+X
+X	  if (kbdmip != NULL)
+X	    {
+X	      if (kbdmip + cpos > &kbdm[NKBDM - 3])
+X		{
+X		  ctrlg (FALSE, 0);
+X		  (*term.t_flush) ();
+X		  return (ABORT);
+X		}
+X	      for (i = 0; i < cpos; ++i)
+X		*kbdmip++ = buf[i];
+X	    }
+X	  (*term.t_putchar) ('\r');
+X	  ttcol = 0;
+X	  (*term.t_flush) ();
+X
+X	  if (buf[0] == 0)
+X	    return (FALSE);
+X
+X	  return (TRUE);
+X
+X	}
+X      else if (c == 0x07)
+X	{			     /* Bell, abort */
+X	  (*term.t_putchar) ('^');
+X	  (*term.t_putchar) ('G');
+X	  ttcol += 2;
+X	  ctrlg (FALSE, 0);
+X	  (*term.t_flush) ();
+X	  return (ABORT);
+X	}
+X      else if (c == 0x7F || c == 0x08)
+X	{			       /* rubout/erase */
+X	  if (cpos != 0)
+X	    {
+X	      (*term.t_putchar) ('\b');
+X	      (*term.t_putchar) (' ');
+X	      (*term.t_putchar) ('\b');
+X	      --ttcol;
+X
+X	      if (buf[--cpos] < 0x20)
+X		{
+X		  (*term.t_putchar) ('\b');
+X		  (*term.t_putchar) (' ');
+X		  (*term.t_putchar) ('\b');
+X		  --ttcol;
+X		}
+X	      if (buf[cpos] == '\n')
+X		{
+X		  (*term.t_putchar) ('\b');
+X		  (*term.t_putchar) ('\b');
+X		  (*term.t_putchar) (' ');
+X		  (*term.t_putchar) (' ');
+X		  (*term.t_putchar) ('\b');
+X		  (*term.t_putchar) ('\b');
+X		  --ttcol;
+X		  --ttcol;
+X		}
+X	      (*term.t_flush) ();
+X	    }
+X	}
+X      else if (c == 0x15)
+X	{				 /* C-U, kill */
+X	  while (cpos != 0)
+X	    {
+X	      (*term.t_putchar) ('\b');
+X	      (*term.t_putchar) (' ');
+X	      (*term.t_putchar) ('\b');
+X	      --ttcol;
+X	      if (buf[--cpos] < 0x20)
+X		{
+X		  (*term.t_putchar) ('\b');
+X		  (*term.t_putchar) (' ');
+X		  (*term.t_putchar) ('\b');
+X		  --ttcol;
+X		}
+X	    }
+X	  (*term.t_flush) ();
+X	}
+X      else
+X	{
+X	  if (cpos < nbuf - 1)
+X	    {
+X	      buf[cpos++] = c;
+X	      if ((c < ' ') && (c != '\n'))
+X		{
+X		  (*term.t_putchar) ('^');
+X		  ++ttcol;
+X		  c ^= 0x40;
+X		}
+X	      if (c != '\n')
+X		(*term.t_putchar) (c);
+X	      else
+X		{		/* put out <NL> for <ret> */
+X		  (*term.t_putchar) ('<');
+X		  (*term.t_putchar) ('N');
+X		  (*term.t_putchar) ('L');
+X		  (*term.t_putchar) ('>');
+X		  ttcol += 3;
+X		}
+X	      ++ttcol;
+X	      (*term.t_flush) ();
+X	    }
+X	}
+X    }
+X}
+X
+X/*
+X * Write a prompt into the message line, then read back a response. Keep track
+X * of the physical position of the cursor. If we are in a keyboard macro throw
+X * the prompt away, and return the remembered response. This lets macros run
+X * at full speed. The reply is always terminated by a carriage return. Handle
+X * erase, kill, and abort keys.
+X */
+Xint mlreply (char *prompt, char *buf, int nbuf)
+X{
+X  return (mlreplyt (prompt, buf, nbuf, '\n'));
+X}
+X
+X/*
+X * Write a message into the message line. Keep track of the physical cursor
+X * position. A small class of printf like format items is handled. Assumes the
+X * stack grows down; this assumption is made by the "++" in the argument scan
+X * loop. Set the "message line" flag TRUE.
+X */
+Xvoid mlwrite (char *fmt, int arg)
+X{
+X  int c;
+X  char *ap;
+X
+X  if (eolexist == FALSE)
+X    {
+X      mlerase ();
+X      (*term.t_flush) ();
+X    }
+X  movecursor (term.t_nrow, 0);
+X  ap = (char *) &arg;
+X  while ((c = *fmt++) != 0)
+X    {
+X      if (c != '%')
+X	{
+X	  (*term.t_putchar) (c);
+X	  ++ttcol;
+X	}
+X      else
+X	{
+X	  c = *fmt++;
+X	  switch (c)
+X	    {
+X	    case 'd':
+X	      mlputi (*(int *) ap, 10);
+X	      ap += sizeof (int);
+X	      break;
+X
+X	    case 'o':
+X	      mlputi (*(int *) ap, 8);
+X	      ap += sizeof (int);
+X	      break;
+X
+X	    case 'x':
+X	      mlputi (*(int *) ap, 16);
+X	      ap += sizeof (int);
+X	      break;
+X
+X	    case 'D':
+X	      mlputli (*(long *) ap, 10);
+X	      ap += sizeof (long);
+X	      break;
+X
+X	    case 's':
+X	      mlputs (*(char **) &ap);
+X	      ap += sizeof (char *);
+X	      break;
+X
+X	    case 'c':
+X	      (*term.t_putchar) (*ap);
+X	      ++ttcol;
+X	      ap += sizeof (char *);
+X	      break;
+X
+X	    default:
+X	      (*term.t_putchar) (c);
+X	      ++ttcol;
+X	    }
+X	}
+X    }
+X  if (eolexist == TRUE)
+X    (*term.t_eeol) ();
+X  (*term.t_flush) ();
+X  mpresf = TRUE;
+X}
+X
+X/*
+X * Write out a string. Update the physical cursor position. This assumes that
+X * the characters in the string all have width "1"; if this is not the case
+X * things will get screwed up a little.
+X */
+Xvoid mlputs (char *s)
+X{
+X  int c;
+X
+X  while ((c = *s++) != 0)
+X    {
+X      (*term.t_putchar) (c);
+X      ++ttcol;
+X    }
+X}
+X
+X/*
+X * Write out an integer, in the specified radix. Update the physical cursor
+X * position. This will not handle any negative numbers; maybe it should.
+X */
+Xvoid mlputi (int i, int r)
+X{
+X  int q;
+X  static char hexdigits[] = "0123456789abcdef";
+X
+X  if (i < 0)
+X    {
+X      i = -i;
+X      (*term.t_putchar) ('-');
+X    }
+X  q = i / r;
+X
+X  if (q != 0)
+X    mlputi (q, r);
+X
+X  (*term.t_putchar) (hexdigits[i % r]);
+X  ++ttcol;
+X}
+X
+X/*
+X * do the same except as a long integer.
+X */
+Xvoid mlputli (long l, int r)
+X{
+X  long q;
+X
+X  if (l < 0)
+X    {
+X      l = -l;
+X      (*term.t_putchar) ('-');
+X    }
+X  q = l / r;
+X
+X  if (q != 0)
+X    mlputli (q, r);
+X
+X  (*term.t_putchar) ((int) (l % r) + '0');
+X  ++ttcol;
+X}
+X
+END-of-display.c
+echo x - file.c
+sed 's/^X//' >file.c << 'END-of-file.c'
+X/*
+X * The routines in this file handle the reading and writing of disk files.
+X * All details about the reading and writing of the disk are in "fileio.c"
+X */
+X
+X#include <string.h>		/* strncpy(3) */
+X#include "estruct.h"
+X#include "edef.h"
+X
+Xextern int mlreply (char *prompt, char *buf, int nbuf);
+Xextern int swbuffer (BUFFER *bp);
+Xextern void mlwrite ();
+Xextern int bclear (BUFFER *bp);
+Xextern int ffropen (char *fn);
+Xextern int ffgetline (char buf[], int nbuf);
+Xextern int ffwopen (char *fn);
+Xextern int ffclose ();
+Xextern int ffputline (char buf[], int nbuf);
+Xextern BUFFER *bfind ();
+Xextern LINE *lalloc ();
+X
+Xint fileread (int f, int n);
+Xint insfile (int f, int n);
+Xint filefind (int f, int n);
+Xint getfile (char fname[]);
+Xint readin (char fname[]);
+Xvoid makename (char bname[], char fname[]);
+Xint filewrite (int f, int n);
+Xint filesave (int f, int n);
+Xint writeout (char *fn);
+Xint filename (int f, int n);
+Xint ifile (char fname[]);
+X
+X/*
+X * Read a file into the current buffer. This is really easy; all you do it
+X * find the name of the file, and call the standard "read a file into the
+X * current buffer" code. Bound to "C-X C-R"
+X */
+Xint fileread (int f, int n)
+X{
+X  int s;
+X  char fname[NFILEN];
+X
+X  if ((s = mlreply ("Read file: ", fname, NFILEN)) != TRUE)
+X    return (s);
+X  return (readin (fname));
+X}
+X
+X/*
+X * Insert a file into the current buffer. This is really easy; all you do it
+X * find the name of the file, and call the standard "insert a file into the
+X * current buffer" code. Bound to "C-X C-I".
+X */
+Xint insfile (int f, int n)
+X{
+X  int s;
+X  char fname[NFILEN];
+X
+X  if ((s = mlreply ("Insert file: ", fname, NFILEN)) != TRUE)
+X    return (s);
+X  return (ifile (fname));
+X}
+X
+X/*
+X * Select a file for editing. Look around to see if you can find the fine in
+X * another buffer; if you can find it just switch to the buffer. If you cannot
+X * find the file, create a new buffer, read in the text, and switch to the new
+X * buffer. Bound to C-X C-F.
+X */
+Xint filefind (int f, int n)
+X{
+X  char fname[NFILEN];		/* file user wishes to find */
+X  int s;			/* status return */
+X
+X  if ((s = mlreply ("Find file: ", fname, NFILEN)) != TRUE)
+X    return (s);
+X  return (getfile (fname));
+X}
+X
+Xint getfile (char fname[])
+X{
+X  BUFFER *bp;
+X  LINE *lp;
+X  char bname[NBUFN];		/* buffer name to put file */
+X  int i, s;
+X
+X  for (bp = bheadp; bp != (BUFFER*)0; bp = bp->b_bufp)
+X    {
+X      if ((bp->b_flag & BFTEMP) == 0 && strcmp (bp->b_fname, fname) == 0)
+X	{
+X	  if (--curbp->b_nwnd == 0)
+X	    {
+X	      curbp->b_dotp = curwp->w_dotp;
+X	      curbp->b_doto = curwp->w_doto;
+X	      curbp->b_markp = curwp->w_markp;
+X	      curbp->b_marko = curwp->w_marko;
+X	    }
+X	  swbuffer (bp);
+X	  lp = curwp->w_dotp;
+X	  i = curwp->w_ntrows / 2;
+X	  while (i-- && lback (lp) != curbp->b_linep)
+X	    lp = lback (lp);
+X	  curwp->w_linep = lp;
+X	  curwp->w_flag |= WFMODE | WFHARD;
+X	  mlwrite ("[Old buffer]");
+X	  return (TRUE);
+X	}
+X    }
+X  makename (bname, fname);	/* New buffer name */
+X  while ((bp = bfind (bname, FALSE, 0)) != (BUFFER*)0)
+X    {
+X      s = mlreply ("Buffer name: ", bname, NBUFN);
+X      if (s == ABORT)		/* ^G to just quit */
+X	return (s);
+X      if (s == FALSE)
+X	{			/* CR to clobber it */
+X	  makename (bname, fname);
+X	  break;
+X	}
+X    }
+X  if (bp == (BUFFER*)0 && (bp = bfind (bname, TRUE, 0)) == (BUFFER*)0)
+X    {
+X      mlwrite ("Cannot create buffer");
+X      return (FALSE);
+X    }
+X  if (--curbp->b_nwnd == 0)
+X    {				/* Undisplay */
+X      curbp->b_dotp = curwp->w_dotp;
+X      curbp->b_doto = curwp->w_doto;
+X      curbp->b_markp = curwp->w_markp;
+X      curbp->b_marko = curwp->w_marko;
+X    }
+X  curbp = bp;			/* Switch to it */
+X  curwp->w_bufp = bp;
+X  curbp->b_nwnd++;
+X  return (readin (fname));	/* Read it in */
+X}
+X
+X/*
+X * Read file "fname" into the current buffer, blowing away any text found
+X * there. Called by both the read and find commands. Return the final status
+X * of the read. Also called by the mainline, to read in a file specified on
+X * the command line as an argument.
+X */
+Xint readin (char fname[])
+X{
+X  LINE *lp1, *lp2;
+X  WINDOW *wp;
+X  BUFFER *bp;
+X  char line[NLINE];
+X  int nbytes, nline, s, i;
+X  int lflag;			/* any lines longer than allowed? */
+X
+X  bp = curbp;			/* Cheap */
+X  if ((s = bclear (bp)) != TRUE) /* Might be old */
+X    return (s);
+X  bp->b_flag &= ~(BFTEMP | BFCHG);
+X  strncpy (bp->b_fname, fname, NFILEN);
+X  if ((s = ffropen (fname)) == FIOERR) /* Hard file open */
+X    goto out;
+X  if (s == FIOFNF)
+X    {				/* File not found */
+X      mlwrite ("[New file]");
+X      goto out;
+X    }
+X  mlwrite ("[Reading file]");
+X  nline = 0;
+X  lflag = FALSE;
+X  while ((s = ffgetline (line, NLINE)) == FIOSUC || s == FIOLNG)
+X    {
+X      if (s == FIOLNG)
+X	lflag = TRUE;
+X      nbytes = strlen (line);
+X      if ((lp1 = lalloc (nbytes)) == NULL)
+X	{
+X	  s = FIOERR;		/* Keep message on the display */
+X	  break;
+X	}
+X      lp2 = lback (curbp->b_linep);
+X      lp2->l_fp = lp1;
+X      lp1->l_fp = curbp->b_linep;
+X      lp1->l_bp = lp2;
+X      curbp->b_linep->l_bp = lp1;
+X      for (i = 0; i < nbytes; ++i)
+X	lputc (lp1, i, line[i]);
+X      ++nline;
+X    }
+X  ffclose ();			/* Ignore errors */
+X  if (s == FIOEOF)
+X    {				/* Don't zap message! */
+X      if (nline == 1)
+X	mlwrite ("[Read 1 line]");
+X      else
+X	mlwrite ("[Read %d lines]", nline);
+X    }
+X  if (lflag)
+X    mlwrite ("[Read %d line(s), Long lines wrapped]", nline);
+X out:
+X  for (wp = wheadp; wp != NULL; wp = wp->w_wndp)
+X    {
+X      if (wp->w_bufp == curbp)
+X	{
+X	  wp->w_linep = lforw (curbp->b_linep);
+X	  wp->w_dotp = lforw (curbp->b_linep);
+X	  wp->w_doto = 0;
+X	  wp->w_markp = NULL;
+X	  wp->w_marko = 0;
+X	  wp->w_flag |= WFMODE | WFHARD;
+X	}
+X    }
+X  if (s == FIOERR || s == FIOFNF) /* False if error */
+X    return (FALSE);
+X  return (TRUE);
+X}
+X
+X/*
+X * Take a file name, and from it fabricate a buffer name. This routine knows
+X * about the syntax of file names on the target system. I suppose that this
+X * information could be put in a better place than a line of code.
+X */
+Xvoid makename (char bname[], char fname[])
+X{
+X  char *cp1, *cp2;
+X
+X  cp1 = &fname[0];
+X  while (*cp1 != 0)
+X    ++cp1;
+X
+X  while (cp1 != &fname[0] && cp1[-1] != '/')
+X    --cp1;
+X  cp2 = &bname[0];
+X  while (cp2 != &bname[NBUFN - 1] && *cp1 != 0 && *cp1 != ';')
+X    *cp2++ = *cp1++;
+X  *cp2 = 0;
+X}
+X
+X/*
+X * Ask for a file name, and write the contents of the current buffer to that
+X * file. Update the remembered file name and clear the buffer changed flag.
+X * This handling of file names is different from the earlier versions, and is
+X * more compatable with Gosling EMACS than with ITS EMACS. Bound to "C-X C-W".
+X */
+Xint filewrite (int f, int n)
+X{
+X  WINDOW *wp;
+X  char fname[NFILEN];
+X  int s;
+X
+X  if ((s = mlreply ("Write file: ", fname, NFILEN)) != TRUE)
+X    return (s);
+X  if ((s = writeout (fname)) == TRUE)
+X    {
+X      strncpy (curbp->b_fname, fname, NFILEN);
+X      curbp->b_flag &= ~BFCHG;
+X      wp = wheadp;		/* Update mode lines */
+X      while (wp != NULL)
+X	{
+X	  if (wp->w_bufp == curbp)
+X	    wp->w_flag |= WFMODE;
+X	  wp = wp->w_wndp;
+X	}
+X    }
+X  return (s);
+X}
+X
+X/*
+X * Save the contents of the current buffer in its associatd file. No nothing
+X * if nothing has changed (this may be a bug, not a feature). Error if there
+X * is no remembered file name for the buffer. Bound to "C-X C-S". May get
+X * called by "C-Z"
+X */
+Xint filesave (int f, int n)
+X{
+X  WINDOW *wp;
+X  int s;
+X
+X  if ((curbp->b_flag & BFCHG) == 0) /* Return, no changes */
+X    return (TRUE);
+X  if (curbp->b_fname[0] == 0)
+X    {				/* Must have a name */
+X      mlwrite ("No file name");
+X      return (FALSE);
+X    }
+X  if ((s = writeout (curbp->b_fname)) == TRUE)
+X    {
+X      curbp->b_flag &= ~BFCHG;
+X      wp = wheadp;		/* Update mode lines */
+X      while (wp != NULL)
+X	{
+X	  if (wp->w_bufp == curbp)
+X	    wp->w_flag |= WFMODE;
+X	  wp = wp->w_wndp;
+X	}
+X    }
+X  return (s);
+X}
+X
+X/*
+X * This function performs the details of file writing. Uses the file
+X * management routines in the "fileio.c" package. The number of lines written
+X * is displayed. Sadly, it looks inside a LINE; provide a macro for this. Most
+X * of the grief is error checking of some sort.
+X */
+Xint writeout (char *fn)
+X{
+X  LINE *lp;
+X  int nline, s;
+X
+X  if ((s = ffwopen (fn)) != FIOSUC) /* Open writes message */
+X    return (FALSE);
+X  mlwrite ("[Writing]");	/* tell us were writing */
+X  lp = lforw (curbp->b_linep);	/* First line */
+X  nline = 0;			/* Number of lines */
+X  while (lp != curbp->b_linep)
+X    {
+X      if ((s = ffputline (&lp->l_text[0], llength (lp))) != FIOSUC)
+X	break;
+X      ++nline;
+X      lp = lforw (lp);
+X    }
+X  if (s == FIOSUC)
+X    {				/* No write error */
+X      s = ffclose ();
+X      if (s == FIOSUC)
+X	{			/* No close error */
+X	  if (nline == 1)
+X	    mlwrite ("[Wrote 1 line]");
+X	  else
+X	    mlwrite ("[Wrote %d lines]", nline);
+X	}
+X    }
+X  else				/* ignore close error */
+X    ffclose ();			/* if a write error */
+X  if (s != FIOSUC)		/* some sort of error */
+X    return (FALSE);
+X  return (TRUE);
+X}
+X
+X/*
+X * The command allows the user to modify the file name associated with the
+X * current buffer. It is like the "f" command in UNIX "ed". The operation is
+X * simple; just zap the name in the BUFFER structure, and mark the windows as
+X * needing an update. You can type a blank line at the prompt if you wish.
+X */
+Xint filename (int f, int n)
+X{
+X  WINDOW *wp;
+X  char fname[NFILEN];
+X  int s;
+X
+X  if ((s = mlreply ("Name: ", fname, NFILEN)) == ABORT)
+X    return (s);
+X  if (s == FALSE)
+X    strncpy (curbp->b_fname, "", 1);
+X  else
+X    strncpy (curbp->b_fname, fname, NFILEN);
+X  wp = wheadp;			/* update mode lines */
+X  while (wp != NULL)
+X    {
+X      if (wp->w_bufp == curbp)
+X	wp->w_flag |= WFMODE;
+X      wp = wp->w_wndp;
+X    }
+X  return (TRUE);
+X}
+X
+X/*
+X * Insert file "fname" into the current buffer, Called by insert file command.
+X * Return the final status of the read.
+X */
+Xint ifile (char fname[])
+X{
+X  LINE *lp0, *lp1, *lp2;
+X  BUFFER *bp;
+X  char line[NLINE];
+X  int i, s, nbytes, nline;
+X  int lflag;			/* any lines longer than allowed? */
+X
+X  bp = curbp;			/* Cheap */
+X  bp->b_flag |= BFCHG;		/* we have changed */
+X  bp->b_flag &= ~BFTEMP;	/* and are not temporary */
+X  if ((s = ffropen (fname)) == FIOERR) /* Hard file open */
+X    goto out;
+X  if (s == FIOFNF)
+X    {				/* File not found */
+X      mlwrite ("[No such file]");
+X      return (FALSE);
+X    }
+X  mlwrite ("[Inserting file]");
+X
+X  /* back up a line and save the mark here */
+X  curwp->w_dotp = lback (curwp->w_dotp);
+X  curwp->w_doto = 0;
+X  curwp->w_markp = curwp->w_dotp;
+X  curwp->w_marko = 0;
+X
+X  nline = 0;
+X  lflag = FALSE;
+X  while ((s = ffgetline (line, NLINE)) == FIOSUC || s == FIOLNG)
+X    {
+X      if (s == FIOLNG)
+X	lflag = TRUE;
+X      nbytes = strlen (line);
+X      if ((lp1 = lalloc (nbytes)) == NULL)
+X	{
+X	  s = FIOERR;		/* keep message on the */
+X	  break;		/* display */
+X	}
+X      lp0 = curwp->w_dotp;	/* line previous to insert */
+X      lp2 = lp0->l_fp;		/* line after insert */
+X
+X      /* re-link new line between lp0 and lp2 */
+X      lp2->l_bp = lp1;
+X      lp0->l_fp = lp1;
+X      lp1->l_bp = lp0;
+X      lp1->l_fp = lp2;
+X
+X      /* and advance and write out the current line */
+X      curwp->w_dotp = lp1;
+X      for (i = 0; i < nbytes; ++i)
+X	lputc (lp1, i, line[i]);
+X      ++nline;
+X    }
+X  ffclose ();			/* Ignore errors */
+X  curwp->w_markp = lforw (curwp->w_markp);
+X  if (s == FIOEOF)
+X    {				/* Don't zap message! */
+X      if (nline == 1)
+X	mlwrite ("[Inserted 1 line]");
+X      else
+X	mlwrite ("[Inserted %d lines]", nline);
+X    }
+X  if (lflag)
+X    mlwrite ("[Inserted %d line(s), Long lines wrapped]", nline);
+X out:
+X  /* advance to the next line and mark the window for changes */
+X  curwp->w_dotp = lforw (curwp->w_dotp);
+X  curwp->w_flag |= WFHARD;
+X
+X  /* copy window parameters back to the buffer structure */
+X  curbp->b_dotp = curwp->w_dotp;
+X  curbp->b_doto = curwp->w_doto;
+X  curbp->b_markp = curwp->w_markp;
+X  curbp->b_marko = curwp->w_marko;
+X
+X  if (s == FIOERR)		/* False if error */
+X    return (FALSE);
+X  return (TRUE);
+X}
+END-of-file.c
+echo x - fileio.c
+sed 's/^X//' >fileio.c << 'END-of-fileio.c'
+X/*
+X * The routines in this file read and write ASCII files from the disk. All of
+X * the knowledge about files is here. A better message writing scheme should
+X * be used
+X */
+X
+X#include <stdio.h>		/* fopen(3), et.al. */
+X#include "estruct.h"
+X
+Xextern void mlwrite ();
+X
+Xint ffropen (char *fn);
+Xint ffwopen (char *fn);
+Xint ffclose ();
+Xint ffputline (char buf[], int nbuf);
+Xint ffgetline (char buf[], int nbuf);
+X
+XFILE *ffp;			/* File pointer, all functions */
+X
+X/*
+X * Open a file for reading.
+X */
+Xint ffropen (char *fn)
+X{
+X  if ((ffp = fopen (fn, "r")) == NULL)
+X    return (FIOFNF);
+X  return (FIOSUC);
+X}
+X
+X/*
+X * Open a file for writing. Return TRUE if all is well, and FALSE on error
+X * (cannot create).
+X */
+Xint ffwopen (char *fn)
+X{
+X  if ((ffp = fopen (fn, "w")) == NULL)
+X    {
+X      mlwrite ("Cannot open file for writing");
+X      return (FIOERR);
+X    }
+X  return (FIOSUC);
+X}
+X
+X/*
+X * Close a file. Should look at the status in all systems.
+X */
+Xint ffclose ()
+X{
+X  if (fclose (ffp) != FALSE)
+X    {
+X      mlwrite ("Error closing file");
+X      return (FIOERR);
+X    }
+X  return (FIOSUC);
+X}
+X
+X/*
+X * Write a line to the already opened file. The "buf" points to the buffer,
+X * and the "nbuf" is its length, less the free newline. Return the status.
+X * Check only at the newline.
+X */
+Xint ffputline (char buf[], int nbuf)
+X{
+X  int i;
+X
+X  for (i = 0; i < nbuf; ++i)
+X    fputc (buf[i] & 0xFF, ffp);
+X
+X  fputc ('\n', ffp);
+X
+X  if (ferror (ffp))
+X    {
+X      mlwrite ("Write I/O error");
+X      return (FIOERR);
+X    }
+X  return (FIOSUC);
+X}
+X
+X/*
+X * Read a line from a file, and store the bytes in the supplied buffer. The
+X * "nbuf" is the length of the buffer. Complain about long lines and lines at
+X * the end of the file that don't have a newline present. Check for I/O errors
+X * too. Return status.
+X */
+Xint ffgetline (char buf[], int nbuf)
+X{
+X  int c, i;
+X
+X  i = 0;
+X
+X  while ((c = fgetc (ffp)) != EOF && c != '\n')
+X    {
+X      if (i >= nbuf - 2)
+X	{
+X	  buf[nbuf - 2] = c;	   /* store last char read */
+X	  buf[nbuf - 1] = 0;	   /* and terminate it */
+X	  mlwrite ("File has long line");
+X	  return (FIOLNG);
+X	}
+X      buf[i++] = c;
+X    }
+X
+X  if (c == EOF)
+X    {
+X      if (ferror (ffp))
+X	{
+X	  mlwrite ("File read error");
+X	  return (FIOERR);
+X	}
+X      if (i != 0)
+X	{
+X	  mlwrite ("File has funny line at EOF");
+X	  return (FIOERR);
+X	}
+X      return (FIOEOF);
+X    }
+X  buf[i] = 0;
+X  return (FIOSUC);
+X}
+END-of-fileio.c
+echo x - line.c
+sed 's/^X//' >line.c << 'END-of-line.c'
+X/*
+X * The functions in this file are a general set of line management utilities.
+X * They are the only routines that touch the text. They also touch the buffer
+X * and window structures, to make sure that the necessary updating gets done.
+X * There are routines in this file that handle the kill buffer too. It isn't
+X * here for any good reason.
+X *
+X * Note that this code only updates the dot and mark values in the window
+X * list. Since all the code acts on the current window, the buffer that we are
+X * editing must be being displayed, which means that "b_nwnd" is non zero,
+X * which means that the dot and mark values in the buffer headers are
+X * nonsense
+X */
+X
+X#include <stdlib.h>		/* malloc(3) */
+X#include "estruct.h"
+X#include "edef.h"
+X
+Xextern void mlwrite ();
+Xextern int backchar (int f, int n);
+X
+XLINE* lalloc (int used);
+Xvoid lfree (LINE *lp);
+Xvoid lchange (int flag);
+Xint linsert (int n, int c);
+Xint lnewline ();
+Xint ldelete (int n, int kflag);
+Xint ldelnewline ();
+Xvoid kdelete ();
+Xint kinsert (int c);
+Xint kremove (int n);
+X
+X#define NBLOCK	16		/* Line block chunk size */
+X#define KBLOCK	1024		/* Kill buffer block size */
+X
+Xchar *kbufp = NULL;		/* Kill buffer data */
+Xunsigned long kused = 0;	/* # of bytes used in KB */
+Xunsigned long ksize = 0;	/* # of bytes allocated in KB */
+X
+X/*
+X * This routine allocates a block of memory large enough to hold a LINE
+X * containing "used" characters. The block is always rounded up a bit. Return
+X * a pointer to the new block, or NULL if there isn't any memory left. Print a
+X * message in the message line if no space.
+X */
+XLINE* lalloc (int used)
+X{
+X  LINE *lp;
+X  int size;
+X  char *malloc ();
+X
+X  size = (used + NBLOCK - 1) & ~(NBLOCK - 1);
+X  if (size == 0)	       /* Assume that an empty */
+X    size = NBLOCK;	       /* line is for type-in */
+X  if ((lp = (LINE *) malloc (sizeof (LINE) + size)) == NULL)
+X    {
+X      mlwrite ("Cannot allocate %d bytes", size);
+X      return (NULL);
+X    }
+X  lp->l_size = size;
+X  lp->l_used = used;
+X  return (lp);
+X}
+X
+X/*
+X * Delete line "lp". Fix all of the links that might point at it (they are
+X * moved to offset 0 of the next line. Unlink the line from whatever buffer it
+X * might be in. Release the memory. The buffers are updated too; the magic
+X * conditions described in the above comments don't hold here
+X */
+Xvoid lfree (LINE *lp)
+X{
+X  BUFFER *bp;
+X  WINDOW *wp;
+X
+X  wp = wheadp;
+X  while (wp != NULL)
+X    {
+X      if (wp->w_linep == lp)
+X	wp->w_linep = lp->l_fp;
+X      if (wp->w_dotp == lp)
+X	{
+X	  wp->w_dotp = lp->l_fp;
+X	  wp->w_doto = 0;
+X	}
+X      if (wp->w_markp == lp)
+X	{
+X	  wp->w_markp = lp->l_fp;
+X	  wp->w_marko = 0;
+X	}
+X      wp = wp->w_wndp;
+X    }
+X  bp = bheadp;
+X  while (bp != NULL)
+X    {
+X      if (bp->b_nwnd == 0)
+X	{
+X	  if (bp->b_dotp == lp)
+X	    {
+X	      bp->b_dotp = lp->l_fp;
+X	      bp->b_doto = 0;
+X	    }
+X	  if (bp->b_markp == lp)
+X	    {
+X	      bp->b_markp = lp->l_fp;
+X	      bp->b_marko = 0;
+X	    }
+X	}
+X      bp = bp->b_bufp;
+X    }
+X  lp->l_bp->l_fp = lp->l_fp;
+X  lp->l_fp->l_bp = lp->l_bp;
+X  free ((char *) lp);
+X}
+X
+X/*
+X * This routine gets called when a character is changed in place in the
+X * current buffer. It updates all of the required flags in the buffer and
+X * window system. The flag used is passed as an argument; if the buffer is
+X * being displayed in more than 1 window we change EDIT t HARD. Set MODE if
+X * the mode line needs to be updated (the "*" has to be set).
+X */
+Xvoid lchange (int flag)
+X{
+X  WINDOW *wp;
+X
+X  if (curbp->b_nwnd != 1)      /* Ensure hard */
+X    flag = WFHARD;
+X  if ((curbp->b_flag & BFCHG) == 0)
+X    {			       /* First change, so */
+X      flag |= WFMODE;	       /* update mode lines */
+X      curbp->b_flag |= BFCHG;
+X    }
+X  wp = wheadp;
+X  while (wp != NULL)
+X    {
+X      if (wp->w_bufp == curbp)
+X	wp->w_flag |= flag;
+X      wp = wp->w_wndp;
+X    }
+X}
+X
+X/*
+X * Insert "n" copies of the character "c" at the current location of dot. In
+X * the easy case all that happens is the text is stored in the line. In the
+X * hard case, the line has to be reallocated. When the window list is updated,
+X * take special care; I screwed it up once. You always update dot in the
+X * current window. You update mark, and a dot in another window, if it is
+X * greater than the place where you did the insert. Return TRUE if all is
+X * well, and FALSE on errors
+X */
+Xint linsert (int n, int c)
+X{
+X  WINDOW *wp;
+X  LINE *lp1, *lp2, *lp3;
+X  char *cp1, *cp2;
+X  int i, doto;
+X
+X  lchange (WFEDIT);
+X  lp1 = curwp->w_dotp;	       /* Current line */
+X  if (lp1 == curbp->b_linep)
+X    {			       /* At the end: special */
+X      if (curwp->w_doto != 0)
+X	{
+X	  mlwrite ("bug: linsert");
+X	  return (FALSE);
+X	}
+X      if ((lp2 = lalloc (n)) == NULL)	/* Allocate new line */
+X	return (FALSE);
+X      lp3 = lp1->l_bp;	       /* Previous line */
+X      lp3->l_fp = lp2;	       /* Link in */
+X      lp2->l_fp = lp1;
+X      lp1->l_bp = lp2;
+X      lp2->l_bp = lp3;
+X      for (i = 0; i < n; ++i)
+X	lp2->l_text[i] = c;
+X      curwp->w_dotp = lp2;
+X      curwp->w_doto = n;
+X      return (TRUE);
+X    }
+X  doto = curwp->w_doto;	       /* Save for later */
+X  if (lp1->l_used + n > lp1->l_size)
+X    {			       /* Hard: reallocate */
+X      if ((lp2 = lalloc (lp1->l_used + n)) == NULL)
+X	return (FALSE);
+X      cp1 = &lp1->l_text[0];
+X      cp2 = &lp2->l_text[0];
+X      while (cp1 != &lp1->l_text[doto])
+X	*cp2++ = *cp1++;
+X      cp2 += n;
+X      while (cp1 != &lp1->l_text[lp1->l_used])
+X	*cp2++ = *cp1++;
+X      lp1->l_bp->l_fp = lp2;
+X      lp2->l_fp = lp1->l_fp;
+X      lp1->l_fp->l_bp = lp2;
+X      lp2->l_bp = lp1->l_bp;
+X      free ((char *) lp1);
+X    }
+X  else
+X    {				/* Easy: in place */
+X      lp2 = lp1;		/* Pretend new line */
+X      lp2->l_used += n;
+X      cp2 = &lp1->l_text[lp1->l_used];
+X      cp1 = cp2 - n;
+X      while (cp1 != &lp1->l_text[doto])
+X	*--cp2 = *--cp1;
+X    }
+X  for (i = 0; i < n; ++i)	/* Add the characters */
+X    lp2->l_text[doto + i] = c;
+X  wp = wheadp;		       /* Update windows */
+X  while (wp != NULL)
+X    {
+X      if (wp->w_linep == lp1)
+X	wp->w_linep = lp2;
+X      if (wp->w_dotp == lp1)
+X	{
+X	  wp->w_dotp = lp2;
+X	  if (wp == curwp || wp->w_doto > doto)
+X	    wp->w_doto += n;
+X	}
+X      if (wp->w_markp == lp1)
+X	{
+X	  wp->w_markp = lp2;
+X	  if (wp->w_marko > doto)
+X	    wp->w_marko += n;
+X	}
+X      wp = wp->w_wndp;
+X    }
+X  return (TRUE);
+X}
+X
+X/*
+X * Insert a newline into the buffer at the current location of dot in the
+X * current window. The funny ass-backwards way it does things is not a botch;
+X * it just makes the last line in the file not a special case. Return TRUE if
+X * everything works out and FALSE on error (memory allocation failure). The
+X * update of dot and mark is a bit easier then in the above case, because the
+X * split forces more updating.
+X */
+Xint lnewline ()
+X{
+X  WINDOW *wp;
+X  char *cp1, *cp2;
+X  LINE *lp1, *lp2;
+X  int doto;
+X
+X  lchange (WFHARD);
+X  lp1 = curwp->w_dotp;	       /* Get the address and */
+X  doto = curwp->w_doto;	       /* offset of "." */
+X  if ((lp2 = lalloc (doto)) == NULL)	/* New first half line */
+X    return (FALSE);
+X  cp1 = &lp1->l_text[0];       /* Shuffle text around */
+X  cp2 = &lp2->l_text[0];
+X  while (cp1 != &lp1->l_text[doto])
+X    *cp2++ = *cp1++;
+X  cp2 = &lp1->l_text[0];
+X  while (cp1 != &lp1->l_text[lp1->l_used])
+X    *cp2++ = *cp1++;
+X  lp1->l_used -= doto;
+X  lp2->l_bp = lp1->l_bp;
+X  lp1->l_bp = lp2;
+X  lp2->l_bp->l_fp = lp2;
+X  lp2->l_fp = lp1;
+X  wp = wheadp;		       /* Windows */
+X  while (wp != NULL)
+X    {
+X      if (wp->w_linep == lp1)
+X	wp->w_linep = lp2;
+X      if (wp->w_dotp == lp1)
+X	{
+X	  if (wp->w_doto < doto)
+X	    wp->w_dotp = lp2;
+X	  else
+X	    wp->w_doto -= doto;
+X	}
+X      if (wp->w_markp == lp1)
+X	{
+X	  if (wp->w_marko < doto)
+X	    wp->w_markp = lp2;
+X	  else
+X	    wp->w_marko -= doto;
+X	}
+X      wp = wp->w_wndp;
+X    }
+X  return (TRUE);
+X}
+X
+X/*
+X * This function deletes "n" bytes, starting at dot. It understands how do
+X * deal with end of lines, etc. It returns TRUE if all of the characters were
+X * deleted, and FALSE if they were not (because dot ran into the end of the
+X * buffer. The "kflag" is TRUE if the text should be put in the kill buffer.
+X */
+Xint ldelete (int n, int kflag)
+X{
+X  LINE *dotp;
+X  WINDOW *wp;
+X  char *cp1, *cp2;
+X  int doto, chunk;
+X
+X  while (n != 0)
+X    {
+X      dotp = curwp->w_dotp;
+X      doto = curwp->w_doto;
+X      if (dotp == curbp->b_linep) /* Hit end of buffer */
+X	return (FALSE);
+X      chunk = dotp->l_used - doto; /* Size of chunk */
+X      if (chunk > n)
+X	chunk = n;
+X      if (chunk == 0)
+X	{			/* End of line, merge */
+X	  lchange (WFHARD);
+X	  if (ldelnewline () == FALSE
+X	      || (kflag != FALSE && kinsert ('\n') == FALSE))
+X	    return (FALSE);
+X	  --n;
+X	  continue;
+X	}
+X      lchange (WFEDIT);
+X      cp1 = &dotp->l_text[doto]; /* Scrunch text */
+X      cp2 = cp1 + chunk;
+X      if (kflag != FALSE)
+X	{			/* Kill? */
+X	  while (cp1 != cp2)
+X	    {
+X	      if (kinsert (*cp1) == FALSE)
+X		return (FALSE);
+X	      ++cp1;
+X	    }
+X	  cp1 = &dotp->l_text[doto];
+X	}
+X      while (cp2 != &dotp->l_text[dotp->l_used])
+X	*cp1++ = *cp2++;
+X      dotp->l_used -= chunk;
+X      wp = wheadp;		/* Fix windows */
+X      while (wp != NULL)
+X	{
+X	  if (wp->w_dotp == dotp && wp->w_doto >= doto)
+X	    {
+X	      wp->w_doto -= chunk;
+X	      if (wp->w_doto < doto)
+X		wp->w_doto = doto;
+X	    }
+X	  if (wp->w_markp == dotp && wp->w_marko >= doto)
+X	    {
+X	      wp->w_marko -= chunk;
+X	      if (wp->w_marko < doto)
+X		wp->w_marko = doto;
+X	    }
+X	  wp = wp->w_wndp;
+X	}
+X      n -= chunk;
+X    }
+X  return (TRUE);
+X}
+X
+X/*
+X * Delete a newline. Join the current line with the next line. If the next
+X * line is the magic header line always return TRUE; merging the last line
+X * with the header line can be thought of as always being a successful
+X * operation, even if nothing is done, and this makes the kill buffer work
+X * "right". Easy cases can be done by shuffling data around. Hard cases
+X * require that lines be moved about in memory. Return FALSE on error and TRUE
+X * if all looks ok. Called by "ldelete" only.
+X */
+Xint ldelnewline ()
+X{
+X  LINE *lp1, *lp2, *lp3;
+X  WINDOW *wp;
+X  char *cp1, *cp2;
+X
+X  lp1 = curwp->w_dotp;
+X  lp2 = lp1->l_fp;
+X  if (lp2 == curbp->b_linep)
+X    {			       /* At the buffer end */
+X      if (lp1->l_used == 0)	 /* Blank line */
+X	lfree (lp1);
+X      return (TRUE);
+X    }
+X  if (lp2->l_used <= lp1->l_size - lp1->l_used)
+X    {
+X      cp1 = &lp1->l_text[lp1->l_used];
+X      cp2 = &lp2->l_text[0];
+X      while (cp2 != &lp2->l_text[lp2->l_used])
+X	*cp1++ = *cp2++;
+X      wp = wheadp;
+X      while (wp != NULL)
+X	{
+X	  if (wp->w_linep == lp2)
+X	    wp->w_linep = lp1;
+X	  if (wp->w_dotp == lp2)
+X	    {
+X	      wp->w_dotp = lp1;
+X	      wp->w_doto += lp1->l_used;
+X	    }
+X	  if (wp->w_markp == lp2)
+X	    {
+X	      wp->w_markp = lp1;
+X	      wp->w_marko += lp1->l_used;
+X	    }
+X	  wp = wp->w_wndp;
+X	}
+X      lp1->l_used += lp2->l_used;
+X      lp1->l_fp = lp2->l_fp;
+X      lp2->l_fp->l_bp = lp1;
+X      free ((char *) lp2);
+X      return (TRUE);
+X    }
+X  if ((lp3 = lalloc (lp1->l_used + lp2->l_used)) == NULL)
+X    return (FALSE);
+X  cp1 = &lp1->l_text[0];
+X  cp2 = &lp3->l_text[0];
+X  while (cp1 != &lp1->l_text[lp1->l_used])
+X    *cp2++ = *cp1++;
+X  cp1 = &lp2->l_text[0];
+X  while (cp1 != &lp2->l_text[lp2->l_used])
+X    *cp2++ = *cp1++;
+X  lp1->l_bp->l_fp = lp3;
+X  lp3->l_fp = lp2->l_fp;
+X  lp2->l_fp->l_bp = lp3;
+X  lp3->l_bp = lp1->l_bp;
+X  wp = wheadp;
+X  while (wp != NULL)
+X    {
+X      if (wp->w_linep == lp1 || wp->w_linep == lp2)
+X	wp->w_linep = lp3;
+X      if (wp->w_dotp == lp1)
+X	wp->w_dotp = lp3;
+X      else if (wp->w_dotp == lp2)
+X	{
+X	  wp->w_dotp = lp3;
+X	  wp->w_doto += lp1->l_used;
+X	}
+X      if (wp->w_markp == lp1)
+X	wp->w_markp = lp3;
+X      else if (wp->w_markp == lp2)
+X	{
+X	  wp->w_markp = lp3;
+X	  wp->w_marko += lp1->l_used;
+X	}
+X      wp = wp->w_wndp;
+X    }
+X  free ((char *) lp1);
+X  free ((char *) lp2);
+X  return (TRUE);
+X}
+X
+X/*
+X * Delete all of the text saved in the kill buffer. Called by commands when a
+X * new kill context is being created. The kill buffer array is released, just
+X * in case the buffer has grown to immense size. No errors.
+X */
+Xvoid kdelete ()
+X{
+X  if (kbufp != NULL)
+X    {
+X      free ((char *) kbufp);
+X      kbufp = NULL;
+X      kused = 0;
+X      ksize = 0;
+X    }
+X}
+X
+X/*
+X * Insert a character to the kill buffer, enlarging the buffer if there isn't
+X * any room. Always grow the buffer in chunks, on the assumption that if you
+X * put something in the kill buffer you are going to put more stuff there too
+X * later. Return TRUE if all is well, and FALSE on errors.
+X */
+Xint kinsert (int c)
+X{
+X  char *realloc ();
+X  char *malloc ();
+X  char *nbufp;
+X
+X  if (kused == ksize)
+X    {
+X      if (ksize == 0)	       /* first time through? */
+X	nbufp = malloc (KBLOCK); /* alloc the first block */
+X      else		       /* or re allocate a bigger block */
+X	nbufp = realloc (kbufp, ksize + KBLOCK);
+X      if (nbufp == NULL)	       /* abort if it fails */
+X	return (FALSE);
+X      kbufp = nbufp;	       /* point our global at it */
+X      ksize += KBLOCK;	       /* and adjust the size */
+X    }
+X  kbufp[kused++] = c;
+X  return (TRUE);
+X}
+X
+X/*
+X * This function gets characters from the kill buffer. If the character index
+X * "n" is off the end, it returns "-1". This lets the caller just scan along
+X * until it gets a "-1" back.
+X */
+Xint kremove (int n)
+X{
+X  if (n >= kused)
+X    return (-1);
+X  else
+X    return (kbufp[n] & 0xFF);
+X}
+END-of-line.c
+echo x - main.c
+sed 's/^X//' >main.c << 'END-of-main.c'
+X/*
+X * This program is in public domain; originally written by Dave G. Conroy.
+X * This file contains the main driving routine, and some keyboard processing
+X * code
+X */
+X
+X#define maindef			/* make global definitions not external */
+X
+X#include <string.h>		/* strncpy(3) */
+X#include <stdlib.h>		/* malloc(3) */
+X#include "estruct.h"		/* global structures and defines */
+X#include "efunc.h"		/* function declarations and name table */
+X#include "edef.h"		/* global definitions */
+X#include "ebind.h"
+X
+Xextern void getwinsize();
+Xextern void vtinit ();
+Xextern void vttidy ();
+Xextern void update ();
+Xextern void mlerase ();
+Xextern void mlwrite ();
+Xextern int mlyesno (char *prompt);
+Xextern void makename (char bname[], char fname[]);
+Xextern int readin (char fname[]);
+Xextern int linsert (int f, int n);
+Xextern int anycb ();
+Xextern BUFFER *bfind ();
+X
+Xint main (int argc, char *argv[]);
+Xvoid edinit (char bname[]);
+Xint execute (int c, int f, int n);
+Xint getkey ();
+Xint getctl ();
+Xint quickexit (int f, int n);
+Xint quit (int f, int n);
+Xint ctlxlp (int f, int n);
+Xint ctlxrp (int f, int n);
+Xint ctlxe (int f, int n);
+Xint ctrlg (int f, int n);
+Xint extendedcmd (int f, int n);
+X
+Xint main (int argc, char *argv[])
+X{
+X  BUFFER *bp;
+X  char bname[NBUFN];		/* buffer name of file to read */
+X  int c, f, n, mflag;
+X  int ffile;			/* first file flag */
+X  int carg;			/* current arg to scan */
+X  int basec;			/* c stripped of meta character */
+X
+X  /* initialize the editor and process the startup file */
+X  getwinsize();			/* find out the "real" screen size */
+X  strncpy (bname, "main", 5);	/* default buffer name */
+X  edinit (bname);		/* Buffers, windows */
+X  vtinit ();			/* Displays */
+X  ffile = TRUE;			/* no file to edit yet */
+X  update ();			/* let the user know we are here */
+X
+X  /* scan through the command line and get the files to edit */
+X  for (carg = 1; carg < argc; ++carg)
+X    {
+X      /* set up a buffer for this file */
+X      makename (bname, argv[carg]);
+X
+X      /* if this is the first file, read it in */
+X      if (ffile)
+X	{
+X	  bp = curbp;
+X	  makename (bname, argv[carg]);
+X	  strncpy (bp->b_bname, bname, NBUFN);
+X	  strncpy (bp->b_fname, argv[carg], NFILEN);
+X	  if (readin (argv[carg]) == ABORT)
+X	    {
+X	      strncpy (bp->b_bname, "main", 5);
+X	      strncpy (bp->b_fname, "", 1);
+X	    }
+X	  bp->b_dotp = bp->b_linep;
+X	  bp->b_doto = 0;
+X	  ffile = FALSE;
+X	}
+X      else
+X	{
+X	  /* set this to inactive */
+X	  bp = bfind (bname, TRUE, 0);
+X	  strncpy (bp->b_fname, argv[carg], NFILEN);
+X	  bp->b_active = FALSE;
+X	}
+X    }
+X
+X  /* setup to process commands */
+X  lastflag = 0;			/* Fake last flags */
+X  curwp->w_flag |= WFMODE;	/* and force an update */
+X
+X loop:
+X  update ();			/* Fix up the screen */
+X  c = getkey ();
+X  if (mpresf != FALSE)
+X    {
+X      mlerase ();
+X      update ();
+X    }
+X  f = FALSE;
+X  n = 1;
+X
+X  /* do META-# processing if needed */
+X
+X  basec = c & ~META;		/* strip meta char off if there */
+X  if ((c & META) && ((basec >= '0' && basec <= '9') || basec == '-'))
+X    {
+X      f = TRUE;			/* there is a # arg */
+X      n = 0;			/* start with a zero default */
+X      mflag = 1;		/* current minus flag */
+X      c = basec;		/* strip the META */
+X      while ((c >= '0' && c <= '9') || (c == '-'))
+X	{
+X	  if (c == '-')
+X	    {
+X	      /* already hit a minus or digit? */
+X	      if ((mflag == -1) || (n != 0))
+X		break;
+X	      mflag = -1;
+X	    }
+X	  else
+X	    n = n * 10 + (c - '0');
+X	  if ((n == 0) && (mflag == -1)) /* lonely - */
+X	    mlwrite ("Arg:");
+X	  else
+X	    mlwrite ("Arg: %d", n * mflag);
+X
+X	  c = getkey ();	/* get the next key */
+X	}
+X      n = n * mflag;		/* figure in the sign */
+X    }
+X  /* do ^U repeat argument processing */
+X
+X  if (c == (CTRL | 'U'))
+X    {				/* ^U, start argument */
+X      f = TRUE;
+X      n = 4;			/* with argument of 4 */
+X      mflag = 0;		 /* that can be discarded */
+X      mlwrite ("Arg: 4");
+X      while (((c = getkey ()) >= '0')
+X	     && ((c <= '9') || (c == (CTRL | 'U')) || (c == '-')))
+X	{
+X	  if (c == (CTRL | 'U'))
+X	    n = n * 4;
+X	  /*
+X	   * If dash, and start of argument string, set arg.
+X	   * to -1.  Otherwise, insert it.
+X	   */
+X	  else if (c == '-')
+X	    {
+X	      if (mflag)
+X		break;
+X	      n = 0;
+X	      mflag = -1;
+X	    }
+X	  /*
+X	   * If first digit entered, replace previous argument
+X	   * with digit and set sign.  Otherwise, append to arg.
+X	   */
+X	  else
+X	    {
+X	      if (!mflag)
+X		{
+X		  n = 0;
+X		  mflag = 1;
+X		}
+X	      n = 10 * n + c - '0';
+X	    }
+X	  mlwrite ("Arg: %d", (mflag >= 0) ? n : (n ? -n : -1));
+X	}
+X      /*
+X       * Make arguments preceded by a minus sign negative and change
+X       * the special argument "^U -" to an effective "^U -1".
+X       */
+X      if (mflag == -1)
+X	{
+X	  if (n == 0)
+X	    n++;
+X	  n = -n;
+X	}
+X    }
+X
+X  if (c == (CTRL | 'X'))       /* ^X is a prefix */
+X    c = CTLX | getctl ();
+X  if (kbdmip != NULL)
+X    {				 /* Save macro strokes */
+X      if (c != (CTLX | ')') && kbdmip > &kbdm[NKBDM - 6])
+X	{
+X	  ctrlg (FALSE, 0);
+X	  goto loop;
+X	}
+X      if (f != FALSE)
+X	{
+X	  *kbdmip++ = (CTRL | 'U');
+X	  *kbdmip++ = n;
+X	}
+X      *kbdmip++ = c;
+X    }
+X  execute (c, f, n);	       /* Do it */
+X  goto loop;
+X}
+X
+X/*
+X * Initialize all of the buffers and windows. The buffer name is passed down
+X * as an argument, because the main routine may have been told to read in a
+X * file by default, and we want the buffer name to be right.
+X */
+Xvoid edinit (char bname[])
+X{
+X  BUFFER *bp;
+X  WINDOW *wp;
+X
+X  bp = bfind (bname, TRUE, 0);	/* First buffer */
+X  blistp = bfind ("[List]", TRUE, BFTEMP); /* Buffer list buffer */
+X  wp = (WINDOW *) malloc (sizeof (WINDOW)); /* First window */
+X  if (bp == NULL || wp == NULL || blistp == NULL)
+X    exit (1);
+X  curbp = bp;			/* Make this current */
+X  wheadp = wp;
+X  curwp = wp;
+X  wp->w_wndp = NULL;		/* Initialize window */
+X  wp->w_bufp = bp;
+X  bp->b_nwnd = 1;		/* Displayed */
+X  wp->w_linep = bp->b_linep;
+X  wp->w_dotp = bp->b_linep;
+X  wp->w_doto = 0;
+X  wp->w_markp = NULL;
+X  wp->w_marko = 0;
+X  wp->w_toprow = 0;
+X  wp->w_ntrows = term.t_nrow - 1; /* "-1" for mode line */
+X  wp->w_force = 0;
+X  wp->w_flag = WFMODE | WFHARD;	/* Full */
+X}
+X
+X/*
+X * This is the general command execution routine. It handles the fake binding
+X * of all the keys to "self-insert". It also clears out the "thisflag" word,
+X * and arranges to move it to the "lastflag", so that the next command can
+X * look at it. Return the status of command.
+X */
+Xint execute (int c, int f, int n)
+X{
+X  KEYTAB *ktp;
+X  int status;
+X
+X  ktp = &keytab[0];	       /* Look in key table */
+X  while (ktp->k_fp != NULL)
+X    {
+X      if (ktp->k_code == c)
+X	{
+X	  thisflag = 0;
+X	  status = (*ktp->k_fp) (f, n);
+X	  lastflag = thisflag;
+X	  return (status);
+X	}
+X      ++ktp;
+X    }
+X
+X  if ((c >= 0x20 && c <= 0x7E)	/* Self inserting */
+X      || (c >= 0xA0 && c <= 0xFE))
+X    {
+X      if (n <= 0)
+X	{			/* Fenceposts */
+X	  lastflag = 0;
+X	  return (n < 0 ? FALSE : TRUE);
+X	}
+X      thisflag = 0;		/* For the future */
+X
+X      status = linsert (n, c);
+X
+X      lastflag = thisflag;
+X      return (status);
+X    }
+X  mlwrite ("\007[Key not bound]"); /* complain */
+X  lastflag = 0;			/* Fake last flags */
+X  return (FALSE);
+X}
+X
+X/*
+X * Read in a key. Do the standard keyboard preprocessing. Convert the keys to
+X * the internal character set.
+X */
+Xint getkey ()
+X{
+X  int c;
+X
+X  c = (*term.t_getchar) ();
+X
+X  if (c == METACH)
+X    {				/* Apply M- prefix */
+X      c = getctl ();
+X      return (META | c);
+X    }
+X  if (c >= 0x00 && c <= 0x1F)	/* C0 control -> C- */
+X    c = CTRL | (c + '@');
+X  return (c);
+X}
+X
+X/*
+X * Get a key. Apply control modifications to the read key.
+X */
+Xint getctl ()
+X{
+X  int c;
+X
+X  c = (*term.t_getchar) ();
+X  if (c >= 'a' && c <= 'z')	/* Force to upper */
+X    c -= 0x20;
+X  if (c >= 0x00 && c <= 0x1F)	/* C0 control -> C- */
+X    c = CTRL | (c + '@');
+X  return (c);
+X}
+X
+X/*
+X * Fancy quit command, as implemented by Norm. If the any buffer has changed
+X * do a write on that buffer and exit emacs, otherwise simply exit.
+X */
+Xint quickexit (int f, int n)
+X{
+X  BUFFER *bp;			/* scanning pointer to buffers */
+X
+X  bp = bheadp;
+X  while (bp != NULL)
+X    {
+X      if ((bp->b_flag & BFCHG) != 0 /* Changed */
+X	  && (bp->b_flag & BFTEMP) == 0)
+X	{			/* Real */
+X	  curbp = bp;		/* make that buffer current */
+X	  mlwrite ("[Saving %s]", (int*)bp->b_fname);
+X	  filesave (f, n);
+X	}
+X      bp = bp->b_bufp;		/* on to the next buffer */
+X    }
+X  return quit (f, n);		/* conditionally quit */
+X}
+X
+X/*
+X * Quit command. If an argument, always quit. Otherwise confirm if a buffer
+X * has been changed and not written out. Normally bound to "C-X C-C".
+X */
+Xint quit (int f, int n)
+X{
+X  int s;
+X
+X  if (f != FALSE	       /* Argument forces it */
+X      || anycb () == FALSE     /* All buffers clean */
+X      || (s = mlyesno ("Modified buffers exist. Leave anyway")) == TRUE)
+X    {
+X      vttidy ();
+X      exit (0);
+X    }
+X  mlwrite ("");
+X  return (s);
+X}
+X
+X/*
+X * Begin a keyboard macro. Error if not at the top level in keyboard
+X * processing. Set up variables and return.
+X */
+Xint ctlxlp (int f, int n)
+X{
+X  if (kbdmip != NULL || kbdmop != NULL)
+X    {
+X      mlwrite ("Not now");
+X      return (FALSE);
+X    }
+X  mlwrite ("[Start macro]");
+X  kbdmip = &kbdm[0];
+X  return (TRUE);
+X}
+X
+X/*
+X * End keyboard macro. Check for the same limit conditions as the above
+X * routine. Set up the variables and return to the caller.
+X */
+Xint ctlxrp (int f, int n)
+X{
+X  if (kbdmip == NULL)
+X    {
+X      mlwrite ("Not now");
+X      return (FALSE);
+X    }
+X  mlwrite ("[End macro]");
+X  kbdmip = NULL;
+X  return (TRUE);
+X}
+X
+X/*
+X * Execute a macro. The command argument is the number of times to loop. Quit
+X * as soon as a command gets an error. Return TRUE if all ok, else FALSE.
+X */
+Xint ctlxe (int f, int n)
+X{
+X  int c, af, an, s;
+X
+X  if (kbdmip != NULL || kbdmop != NULL)
+X    {
+X      mlwrite ("No macro defined");
+X      return (FALSE);
+X    }
+X  if (n <= 0)
+X    return (TRUE);
+X  do
+X    {
+X      kbdmop = &kbdm[0];
+X      do
+X	{
+X	  af = FALSE;
+X	  an = 1;
+X	  if ((c = *kbdmop++) == (CTRL | 'U'))
+X	    {
+X	      af = TRUE;
+X	      an = *kbdmop++;
+X	      c = *kbdmop++;
+X	    }
+X	  s = TRUE;
+X	}
+X      while (c != (CTLX | ')') && (s = execute (c, af, an)) == TRUE);
+X      kbdmop = NULL;
+X    }
+X  while (s == TRUE && --n);
+X  return (s);
+X}
+X
+X/*
+X * Abort. Beep the beeper. Kill off any keyboard macro, etc., that is in
+X * progress. Sometimes called as a routine, to do general aborting of stuff.
+X */
+Xint ctrlg (int f, int n)
+X{
+X  (*term.t_beep) ();
+X  if (kbdmip != NULL)
+X    {
+X      kbdm[0] = (CTLX | ')');
+X      kbdmip = NULL;
+X    }
+X  mlwrite ("[Aborted]");
+X  return (ABORT);
+X}
+X
+X/*
+X * Handle ANSI escape-extended commands (with "ESC [" or "ESC O" prefix)
+X */
+Xint extendedcmd (int f, int n)
+X{
+X  int (*cmd)();
+X  int c;
+X
+X  c = getctl();
+X  switch (c)
+X    {
+X    case 'A': cmd = backline; break;
+X    case 'B': cmd = forwline; break;
+X    case 'C': cmd = forwchar; break;
+X    case 'D': cmd = backchar; break;
+X    case 'H': cmd = gotobob; break;
+X    case 'W': cmd = gotoeob; break;
+X    case '5': cmd = backpage; getctl(); break;
+X    case '6': cmd = forwpage; getctl(); break;
+X    case '7': cmd = gotobob; getctl(); break;
+X    case '8': cmd = gotoeob; getctl(); break;
+X    default: mlwrite ("\007[Key not bound]");
+X      return (FALSE);
+X    }
+X  return cmd(f, n);
+X}
+END-of-main.c
+echo x - random.c
+sed 's/^X//' >random.c << 'END-of-random.c'
+X/*
+X * This file contains the command processing functions for a number of random
+X * commands. There is no functional grouping here, for sure.
+X */
+X
+X#include "estruct.h"
+X#include "edef.h"
+X
+Xextern void mlwrite ();
+Xextern void lchange (int flag);
+Xextern int lnewline ();
+Xextern int linsert (int n, int c);
+Xextern int backchar (int f, int n);
+Xextern void kdelete ();
+Xextern int ldelete (int f, int n);
+Xextern int kremove (int k);
+X
+Xint setfillcol (int f, int n);
+Xint showcpos (int f, int n);
+Xint getccol (int bflg);
+Xint twiddle (int f, int n);
+Xint quote (int f, int n);
+Xint tab (int f, int n);
+Xint openline (int f, int n);
+Xint newline (int f, int n);
+Xint forwdel (int f, int n);
+Xint backdel (int f, int n);
+Xint killtext (int f, int n);
+Xint yank (int f, int n);
+X
+X/*
+X * Set fill column to n.
+X */
+Xint setfillcol (int f, int n)
+X{
+X  fillcol = n;
+X  mlwrite ("[Fill column is %d]", n);
+X  return (TRUE);
+X}
+X
+X/*
+X * Display the current position of the cursor, in origin 1 X-Y coordinates,
+X * the character that is under the cursor (in hex), and the fraction of the
+X * text that is before the cursor. The displayed column is not the current
+X * column, but the column that would be used on an infinite width display.
+X * Normally this is bound to "C-X ="
+X */
+Xint showcpos (int f, int n)
+X{
+X  LINE *clp;
+X  long nch, nbc;
+X  int cbo, cac, ratio, col;
+X
+X  clp = lforw (curbp->b_linep);	/* Grovel the data */
+X  cbo = 0;
+X  nch = 0;
+X  nbc = 0;
+X  cac = 0;
+X  for (;;)
+X    {
+X      if (clp == curwp->w_dotp && cbo == curwp->w_doto)
+X	{
+X	  nbc = nch;
+X	  if (cbo == llength (clp))
+X	    cac = '\n';
+X	  else
+X	    cac = lgetc (clp, cbo);
+X	}
+X      if (cbo == llength (clp))
+X	{
+X	  if (clp == curbp->b_linep)
+X	    break;
+X	  clp = lforw (clp);
+X	  cbo = 0;
+X	}
+X      else
+X	++cbo;
+X      ++nch;
+X    }
+X  col = getccol (FALSE);       /* Get real column */
+X  ratio = 0;		       /* Ratio before dot */
+X  if (nch != 0)
+X    ratio = (100L * nbc) / nch;
+X  mlwrite ("Char: %c (0%o, %d, 0x%x)  point=%D of %D(%d%%) column %d",
+X	   ((cac > 31) && (cac < 128) ? cac : 32),
+X	   cac, cac, cac, nbc + 1, nch, ratio, col);
+X  return (TRUE);
+X}
+X
+X/*
+X * Return current column.  Stop at first non-blank given TRUE argument.
+X */
+Xint getccol (int bflg)
+X{
+X  int c, i, col;
+X
+X  col = 0;
+X  for (i = 0; i < curwp->w_doto; ++i)
+X    {
+X      c = lgetc (curwp->w_dotp, i);
+X      if (c != ' ' && c != '\t' && bflg)
+X	break;
+X      if (c == '\t')
+X	col |= 0x07;
+X      else if (c < 0x20 || c == 0x7F)
+X	++col;
+X      ++col;
+X    }
+X  return (col);
+X}
+X
+X/*
+X * Twiddle the two characters on either side of dot. If dot is at the end of
+X * the line twiddle the two characters before it. Return with an error if dot
+X * is at the beginning of line; it seems to be a bit pointless to make this
+X * work. This fixes up a very common typo with a single stroke. Normally bound
+X * to "C-T". This always works within a line, so "WFEDIT" is good enough
+X */
+Xint twiddle (int f, int n)
+X{
+X  LINE *dotp;
+X  int doto, cl, cr;
+X
+X  dotp = curwp->w_dotp;
+X  doto = curwp->w_doto;
+X  if (doto == llength (dotp) && --doto < 0)
+X    return (FALSE);
+X  cr = lgetc (dotp, doto);
+X  if (--doto < 0)
+X    return (FALSE);
+X  cl = lgetc (dotp, doto);
+X  lputc (dotp, doto + 0, cr);
+X  lputc (dotp, doto + 1, cl);
+X  lchange (WFEDIT);
+X  return (TRUE);
+X}
+X
+X/*
+X * Quote the next character, and insert it into the buffer. All the characters
+X * are taken literally, with the exception of the newline, which always has
+X * its line splitting meaning. The character is always read, even if it is
+X * inserted 0 times, for regularity. Bound to "C-Q"
+X */
+Xint quote (int f, int n)
+X{
+X  int s, c;
+X
+X  c = (*term.t_getchar) ();
+X  if (n < 0)
+X    return (FALSE);
+X  if (n == 0)
+X    return (TRUE);
+X  if (c == '\n')
+X    {
+X      do
+X	{
+X	  s = lnewline ();
+X	}
+X      while (s == TRUE && --n);
+X      return (s);
+X    }
+X  return (linsert (n, c));
+X}
+X
+X/*
+X * Insert a tab into file.
+X * Bound to "C-I"
+X */
+Xint tab (int f, int n)
+X{
+X  if (n < 0)
+X    return (FALSE);
+X  return (linsert (n, 9));
+X}
+X
+X/*
+X * Open up some blank space. The basic plan is to insert a bunch of newlines,
+X * and then back up over them. Everything is done by the subcommand
+X * processors. They even handle the looping. Normally this is bound to "C-O"
+X */
+Xint openline (int f, int n)
+X{
+X  int i, s;
+X
+X  if (n < 0)
+X    return (FALSE);
+X  if (n == 0)
+X    return (TRUE);
+X  i = n;		       /* Insert newlines */
+X  do
+X    {
+X      s = lnewline ();
+X    }
+X  while (s == TRUE && --i);
+X  if (s == TRUE)	       /* Then back up overtop */
+X    s = backchar (f, n);       /* of them all */
+X  return (s);
+X}
+X
+X/*
+X * Insert a newline. Bound to "C-M".
+X */
+Xint newline (int f, int n)
+X{
+X  int s;
+X
+X  if (n < 0)
+X    return (FALSE);
+X
+X  /* insert some lines */
+X  while (n--)
+X    {
+X      if ((s = lnewline ()) != TRUE)
+X	return (s);
+X    }
+X  return (TRUE);
+X}
+X
+X/*
+X * Delete forward. This is real easy, because the basic delete routine does
+X * all of the work. Watches for negative arguments, and does the right thing.
+X * If any argument is present, it kills rather than deletes, to prevent loss
+X * of text if typed with a big argument. Normally bound to "C-D"
+X */
+Xint forwdel (int f, int n)
+X{
+X  if (n < 0)
+X    return (backdel (f, -n));
+X  if (f != FALSE)
+X    {			       /* Really a kill */
+X      if ((lastflag & CFKILL) == 0)
+X	kdelete ();
+X      thisflag |= CFKILL;
+X    }
+X  return (ldelete (n, f));
+X}
+X
+X/*
+X * Delete backwards. This is quite easy too, because it's all done with other
+X * functions. Just move the cursor back, and delete forwards. Like delete
+X * forward, this actually does a kill if presented with an argument. Bound to
+X * both "RUBOUT" and "C-H"
+X */
+Xint backdel (int f, int n)
+X{
+X  int s;
+X
+X  if (n < 0)
+X    return (forwdel (f, -n));
+X  if (f != FALSE)
+X    {			       /* Really a kill */
+X      if ((lastflag & CFKILL) == 0)
+X	kdelete ();
+X      thisflag |= CFKILL;
+X    }
+X  if ((s = backchar (f, n)) == TRUE)
+X    s = ldelete (n, f);
+X  return (s);
+X}
+X
+X/*
+X * Kill text. If called without an argument, it kills from dot to the end of
+X * the line, unless it is at the end of the line, when it kills the newline.
+X * If called with an argument of 0, it kills from the start of the line to
+X * dot. If called with a positive argument, it kills from dot forward over
+X * that number of newlines. If called with a negative argument it kills
+X * backwards that number of newlines. Normally bound to "C-K"
+X */
+Xint killtext (int f, int n)
+X{
+X  LINE *nextp;
+X  int chunk;
+X
+X  if ((lastflag & CFKILL) == 0)/* Clear kill buffer if last wasn't a kill */
+X    kdelete ();
+X  thisflag |= CFKILL;
+X  if (f == FALSE)
+X    {
+X      chunk = llength (curwp->w_dotp) - curwp->w_doto;
+X      if (chunk == 0)
+X	chunk = 1;
+X    }
+X  else if (n == 0)
+X    {
+X      chunk = curwp->w_doto;
+X      curwp->w_doto = 0;
+X    }
+X  else if (n > 0)
+X    {
+X      chunk = llength (curwp->w_dotp) - curwp->w_doto + 1;
+X      nextp = lforw (curwp->w_dotp);
+X      while (--n)
+X	{
+X	  if (nextp == curbp->b_linep)
+X	    return (FALSE);
+X	  chunk += llength (nextp) + 1;
+X	  nextp = lforw (nextp);
+X	}
+X    }
+X  else
+X    {
+X      mlwrite ("neg kill");
+X      return (FALSE);
+X    }
+X  return (ldelete (chunk, TRUE));
+X}
+X
+X/*
+X * Yank text back from the kill buffer. This is really easy. All of the work
+X * is done by the standard insert routines. All you do is run the loop, and
+X * check for errors. Bound to "C-Y"
+X */
+Xint yank (int f, int n)
+X{
+X  int c, i;
+X
+X  if (n < 0)
+X    return (FALSE);
+X  while (n--)
+X    {
+X      i = 0;
+X      while ((c = kremove (i)) >= 0)
+X	{
+X	  if (c == '\n')
+X	    {
+X	      if (lnewline (FALSE, 1) == FALSE)
+X		return (FALSE);
+X	    }
+X	  else
+X	    {
+X	      if (linsert (1, c) == FALSE)
+X		return (FALSE);
+X	    }
+X	  ++i;
+X	}
+X    }
+X  return (TRUE);
+X}
+END-of-random.c
+echo x - region.c
+sed 's/^X//' >region.c << 'END-of-region.c'
+X/*
+X * The routines in this file deal with the region, that magic space between
+X * "." and mark. Some functions are commands. Some functions are just for
+X * internal use
+X */
+X
+X#include "estruct.h"
+X#include "edef.h"
+X
+Xextern void kdelete ();
+Xextern int ldelete (int f, int n);
+Xextern int kinsert (int c);
+Xextern void mlwrite ();
+X
+Xint killregion (int f, int n);
+Xint copyregion (int f, int n);
+Xint getregion (REGION *rp);
+X
+X/*
+X * Kill the region. Ask "getregion" to figure out the bounds of the region.
+X * Move "." to the start, and kill the characters. Bound to "C-W"
+X */
+Xint killregion (int f, int n)
+X{
+X  REGION region;
+X  int s;
+X
+X  if ((s = getregion (&region)) != TRUE)
+X    return (s);
+X  if ((lastflag & CFKILL) == 0) /* This is a kill type */
+X    kdelete ();			/* command, so do magic */
+X  thisflag |= CFKILL;		/* kill buffer stuff */
+X  curwp->w_dotp = region.r_linep;
+X  curwp->w_doto = region.r_offset;
+X  return (ldelete (region.r_size, TRUE));
+X}
+X
+X/*
+X * Copy all of the characters in the region to the kill buffer. Don't move dot
+X * at all. This is a bit like a kill region followed by a yank. Bound to "M-W"
+X */
+Xint copyregion (int f, int n)
+X{
+X  LINE *linep;
+X  REGION region;
+X  int loffs, s;
+X
+X  if ((s = getregion (&region)) != TRUE)
+X    return (s);
+X  if ((lastflag & CFKILL) == 0) /* Kill type command */
+X    kdelete ();
+X  thisflag |= CFKILL;
+X  linep = region.r_linep;	/* Current line */
+X  loffs = region.r_offset;	/* Current offset */
+X  while (region.r_size--)
+X    {
+X      if (loffs == llength (linep))
+X	{			/* End of line */
+X	  if ((s = kinsert ('\n')) != TRUE)
+X	    return (s);
+X	  linep = lforw (linep);
+X	  loffs = 0;
+X	}
+X      else
+X	{			/* Middle of line */
+X	  if ((s = kinsert (lgetc (linep, loffs))) != TRUE)
+X	    return (s);
+X	  ++loffs;
+X	}
+X    }
+X  return (TRUE);
+X}
+X
+X/*
+X * This routine figures out the bounds of the region in the current window,
+X * and fills in the fields of the "REGION" structure pointed to by "rp".
+X * Because the dot and mark are usually very close together, we scan outward
+X * from dot looking for mark. This should save time. Return a standard code.
+X * Callers of this routine should be prepared to get an "ABORT" status; we
+X * might make this have the conform thing later
+X */
+Xint getregion (REGION *rp)
+X{
+X  LINE *flp, *blp;
+X  int fsize, bsize;
+X
+X  if (curwp->w_markp == (struct LINE*)0)
+X    {
+X      mlwrite ("No mark set in this window");
+X      return (FALSE);
+X    }
+X  if (curwp->w_dotp == curwp->w_markp)
+X    {
+X      rp->r_linep = curwp->w_dotp;
+X      if (curwp->w_doto < curwp->w_marko)
+X	{
+X	  rp->r_offset = curwp->w_doto;
+X	  rp->r_size = curwp->w_marko - curwp->w_doto;
+X	}
+X      else
+X	{
+X	  rp->r_offset = curwp->w_marko;
+X	  rp->r_size = curwp->w_doto - curwp->w_marko;
+X	}
+X      return (TRUE);
+X    }
+X  blp = curwp->w_dotp;
+X  bsize = curwp->w_doto;
+X  flp = curwp->w_dotp;
+X  fsize = llength (flp) - curwp->w_doto + 1;
+X  while (flp != curbp->b_linep || lback (blp) != curbp->b_linep)
+X    {
+X      if (flp != curbp->b_linep)
+X	{
+X	  flp = lforw (flp);
+X	  if (flp == curwp->w_markp)
+X	    {
+X	      rp->r_linep = curwp->w_dotp;
+X	      rp->r_offset = curwp->w_doto;
+X	      rp->r_size = fsize + curwp->w_marko;
+X	      return (TRUE);
+X	    }
+X	  fsize += llength (flp) + 1;
+X	}
+X      if (lback (blp) != curbp->b_linep)
+X	{
+X	  blp = lback (blp);
+X	  bsize += llength (blp) + 1;
+X	  if (blp == curwp->w_markp)
+X	    {
+X	      rp->r_linep = blp;
+X	      rp->r_offset = curwp->w_marko;
+X	      rp->r_size = bsize - curwp->w_marko;
+X	      return (TRUE);
+X	    }
+X	}
+X    }
+X  mlwrite ("Bug: lost mark");
+X  return (FALSE);
+X}
+END-of-region.c
+echo x - search.c
+sed 's/^X//' >search.c << 'END-of-search.c'
+X/*
+X * The functions in this file implement commands that search in the forward
+X * and backward directions. There are no special characters in the search
+X * strings
+X */
+X
+X#include <string.h>		/* strncpy(3), strncat(3) */
+X#include "estruct.h"
+X#include "edef.h"
+X
+Xextern void mlwrite ();
+Xextern int mlreplyt (char *prompt, char *buf, int nbuf, char eolchar);
+Xextern void update ();
+Xextern int forwchar (int f, int n);
+Xextern int ldelete (int n, int kflag);
+Xextern int lnewline ();
+Xextern int linsert (int n, int c);
+X
+Xint forwsearch (int f, int n);
+Xint forwhunt (int f, int n);
+Xint backsearch (int f, int n);
+Xint backhunt (int f, int n);
+Xint bsearch (int f, int n);
+Xint eq (int bc, int pc);
+Xint readpattern (char *prompt);
+Xint sreplace (int f, int n);
+Xint qreplace (int f, int n);
+Xint replaces (int kind, int f, int n);
+Xint forscan (char *patrn, int leavep);
+Xvoid expandp (char *srcstr, char *deststr, int maxlength);
+X
+X#define	PTBEG	1		/* leave the point at the begining on search */
+X#define	PTEND	2		/* leave the point at the end on search */
+X
+X/*
+X * Search forward. Get a search string from the user, and search, beginning at
+X * ".", for the string. If found, reset the "." to be just after the match
+X * string, and [perhaps] repaint the display. Bound to "C-S"
+X */
+Xint forwsearch (int f, int n)
+X{
+X  int status;
+X
+X  if (n == 0)			/* resolve the repeat count */
+X    n = 1;
+X  if (n < 1)			/* search backwards */
+X    return (backsearch (f, -n));
+X
+X  /* ask the user for the text of a pattern */
+X  if ((status = readpattern ("Search")) != TRUE)
+X    return (status);
+X
+X  /* search for the pattern */
+X  while (n-- > 0)
+X    {
+X      if ((status = forscan (&pat[0], PTEND)) == FALSE)
+X	break;
+X    }
+X
+X  /* and complain if not there */
+X  if (status == FALSE)
+X    mlwrite ("Not found");
+X  return (status);
+X}
+X
+Xint forwhunt (int f, int n)
+X{
+X  int status;
+X
+X  /* resolve the repeat count */
+X  if (n == 0)
+X    n = 1;
+X  if (n < 1)			/* search backwards */
+X    return (backhunt (f, -n));
+X
+X  /* Make sure a pattern exists */
+X  if (pat[0] == 0)
+X    {
+X      mlwrite ("No pattern set");
+X      return (FALSE);
+X    }
+X  /* search for the pattern */
+X  while (n-- > 0)
+X    {
+X      if ((status = forscan (&pat[0], PTEND)) == FALSE)
+X	break;
+X    }
+X
+X  /* and complain if not there */
+X  if (status == FALSE)
+X    mlwrite ("Not found");
+X  return (status);
+X}
+X
+X/*
+X * Reverse search. Get a search string from the user, and search, starting at
+X * "." and proceeding toward the front of the buffer. If found "." is left
+X * pointing at the first character of the pattern [the last character that was
+X * matched]. Bound to "C-R"
+X */
+Xint backsearch (int f, int n)
+X{
+X  int s;
+X
+X  if (n == 0)			/* resolve null and negative arguments */
+X    n = 1;
+X  if (n < 1)
+X    return (forwsearch (f, -n));
+X
+X  if ((s = readpattern("Reverse search")) != TRUE)/* get a pattern to search */
+X    return (s);
+X
+X  return bsearch (f, n);	/* and go search for it */
+X}
+X
+X/* hunt backward for the last search string entered
+X */
+Xint backhunt (int f, int n)
+X{
+X  if (n == 0)			/* resolve null and negative arguments */
+X    n = 1;
+X  if (n < 1)
+X    return (forwhunt (f, -n));
+X
+X  if (pat[0] == 0)		/* Make sure a pattern exists */
+X    {
+X      mlwrite ("No pattern set");
+X      return (FALSE);
+X    }
+X  return bsearch (f, n);	/* go search */
+X}
+X
+Xint bsearch (int f, int n)
+X{
+X  LINE *clp, *tlp;
+X  char *epp, *pp;
+X  int cbo, tbo, c;
+X
+X  /* find a pointer to the end of the pattern */
+X  for (epp = &pat[0]; epp[1] != 0; ++epp)
+X    ;
+X
+X  /* make local copies of the starting location */
+X  clp = curwp->w_dotp;
+X  cbo = curwp->w_doto;
+X
+X  while (n-- > 0)
+X    {
+X      for (;;)
+X	{
+X	  /* if we are at the begining of the line, wrap back around */
+X	  if (cbo == 0)
+X	    {
+X	      clp = lback (clp);
+X
+X	      if (clp == curbp->b_linep)
+X		{
+X		  mlwrite ("Not found");
+X		  return (FALSE);
+X		}
+X	      cbo = llength (clp) + 1;
+X	    }
+X	  /* fake the <NL> at the end of a line */
+X	  if (--cbo == llength (clp))
+X	    c = '\n';
+X	  else
+X	    c = lgetc (clp, cbo);
+X
+X	  /* check for a match against the end of the pattern */
+X	  if (eq (c, *epp) != FALSE)
+X	    {
+X	      tlp = clp;
+X	      tbo = cbo;
+X	      pp = epp;
+X	      /* scanning backwards through the rest of the pattern
+X	       * looking for a match */
+X	      while (pp != &pat[0])
+X		{
+X		  /* wrap across a line break */
+X		  if (tbo == 0)
+X		    {
+X		      tlp = lback (tlp);
+X		      if (tlp == curbp->b_linep)
+X			goto fail;
+X
+X		      tbo = llength (tlp) + 1;
+X		    }
+X		  /* fake the <NL> */
+X		  if (--tbo == llength (tlp))
+X		    c = '\n';
+X		  else
+X		    c = lgetc (tlp, tbo);
+X
+X		  if (eq (c, *--pp) == FALSE)
+X		    goto fail;
+X		}
+X
+X	      /* A Match!  reset the current cursor */
+X	      curwp->w_dotp = tlp;
+X	      curwp->w_doto = tbo;
+X	      curwp->w_flag |= WFMOVE;
+X	      goto next;
+X	    }
+X	fail:;
+X	}
+X    next:;
+X    }
+X  return (TRUE);
+X}
+X
+X/*
+X * Compare two characters. The "bc" comes from the buffer. It has it's case
+X * folded out. The "pc" is from the pattern
+X */
+Xint eq (int bc, int pc)
+X{
+X  if (bc >= 'a' && bc <= 'z')
+X    bc -= 0x20;
+X  if (pc >= 'a' && pc <= 'z')
+X    pc -= 0x20;
+X  if (bc == pc)
+X    return (TRUE);
+X  return (FALSE);
+X}
+X
+X/*
+X * Read a pattern. Stash it in the external variable "pat". The "pat" is not
+X * updated if the user types in an empty line. If the user typed an empty
+X * line, and there is no old pattern, it is an error. Display the old pattern,
+X * in the style of Jeff Lomicka. There is some do-it-yourself control
+X * expansion. change to using <ESC> to delemit the end-of-pattern to allow
+X * <NL>s in the search string
+X */
+Xint readpattern (char *prompt)
+X{
+X  char tpat[NPAT + 20];
+X  int s;
+X
+X  strncpy (tpat, prompt, NPAT-12); /* copy prompt to output string */
+X  strncat (tpat, " [", 3);	/* build new prompt string */
+X  expandp (&pat[0], &tpat[strlen (tpat)], NPAT / 2); /* add old pattern */
+X  strncat (tpat, "]<ESC>: ", 9);
+X
+X  s = mlreplyt (tpat, tpat, NPAT, 27); /* Read pattern */
+X
+X  if (s == TRUE)		/* Specified */
+X    strncpy (pat, tpat, NPAT);
+X  else if (s == FALSE && pat[0] != 0) /* CR, but old one */
+X    s = TRUE;
+X
+X  return (s);
+X}
+X
+X/*
+X * Search and replace (ESC-R)
+X */
+Xint sreplace (int f, int n)
+X{
+X  return (replaces (FALSE, f, n));
+X}
+X
+X/*
+X * search and replace with query (ESC-CTRL-R)
+X */
+Xint qreplace (int f, int n)
+X{
+X  return (replaces (TRUE, f, n));
+X}
+X
+X/*
+X * replaces: search for a string and replace it with another string. query
+X * might be enabled (according to kind)
+X */
+Xint replaces (int kind, int f, int n)
+X{
+X  LINE *origline;		/* original "." position */
+X  char tmpc;			/* temporary character */
+X  char c;			/* input char for query */
+X  char tpat[NPAT];		/* temporary to hold search pattern */
+X  int i;			/* loop index */
+X  int s;			/* success flag on pattern inputs */
+X  int slength, rlength;		/* length of search and replace strings */
+X  int numsub;			/* number of substitutions */
+X  int nummatch;			/* number of found matches */
+X  int nlflag;			/* last char of search string a <NL>? */
+X  int nlrepl;			/* was a replace done on the last line? */
+X  int origoff;			/* and offset (for . query option) */
+X
+X  /* check for negative repititions */
+X  if (f && n < 0)
+X    return (FALSE);
+X
+X  /* ask the user for the text of a pattern */
+X  if ((s = readpattern ((kind == FALSE ? "Replace" : "Query replace"))) != TRUE)
+X    return (s);
+X  strncpy (&tpat[0], &pat[0], NPAT); /* salt it away */
+X
+X  /* ask for the replacement string */
+X  strncpy (&pat[0], &rpat[0], NPAT); /* set up default string */
+X  if ((s = readpattern ("with")) == ABORT)
+X    return (s);
+X
+X  /* move everything to the right place and length them */
+X  strncpy (&rpat[0], &pat[0], NPAT);
+X  strncpy (&pat[0], &tpat[0], NPAT);
+X  slength = strlen (&pat[0]);
+X  rlength = strlen (&rpat[0]);
+X
+X  /* set up flags so we can make sure not to do a recursive replace on the
+X   * last line */
+X  nlflag = (pat[slength - 1] == '\n');
+X  nlrepl = FALSE;
+X
+X  /* build query replace question string */
+X  strncpy (tpat, "Replace '", 10);
+X  expandp (&pat[0], &tpat[strlen (tpat)], NPAT / 3);
+X  strncat (tpat, "' with '", 9);
+X  expandp (&rpat[0], &tpat[strlen (tpat)], NPAT / 3);
+X  strncat (tpat, "'? ", 4);
+X
+X  /* save original . position */
+X  origline = curwp->w_dotp;
+X  origoff = curwp->w_doto;
+X
+X  /* scan through the file */
+X  numsub = 0;
+X  nummatch = 0;
+X  while ((f == FALSE || n > nummatch) &&
+X	 (nlflag == FALSE || nlrepl == FALSE))
+X    {
+X      /* search for the pattern */
+X      if (forscan (&pat[0], PTBEG) != TRUE)
+X	break;			/* all done */
+X      ++nummatch;		/* increment # of matches */
+X
+X      /* check if we are on the last line */
+X      nlrepl = (lforw (curwp->w_dotp) == curwp->w_bufp->b_linep);
+X
+X      /* check for query */
+X      if (kind)
+X	{
+X	  /* get the query */
+X	  mlwrite (&tpat[0], &pat[0], &rpat[0]);
+X	qprompt:
+X	  update ();		/* show the proposed place to change */
+X	  c = (*term.t_getchar) (); /* and input */
+X	  mlwrite ("");		/* and clear it */
+X
+X	  /* and respond appropriately */
+X	  switch (c)
+X	    {
+X	    case 'y':		/* yes, substitute */
+X	    case ' ':
+X	      break;
+X
+X	    case 'n':		/* no, onword */
+X	      forwchar (FALSE, 1);
+X	      continue;
+X
+X	    case '!':		/* yes/stop asking */
+X	      kind = FALSE;
+X	      break;
+X
+X	    case '.':		/* abort! and return */
+X	      /* restore old position */
+X	      curwp->w_dotp = origline;
+X	      curwp->w_doto = origoff;
+X	      curwp->w_flag |= WFMOVE;
+X
+X	    case BELL:		/* abort! and stay */
+X	      mlwrite ("Aborted!");
+X	      return (FALSE);
+X
+X	    case 0x0d:		/* controlled exit */
+X	    case 'q':
+X	      return (TRUE);
+X
+X	    default:		/* bitch and beep */
+X	      (*term.t_beep) ();
+X
+X	    case '?':		/* help me */
+X	      mlwrite ("(Y)es, (N)o, (!)Do the rest, (^G,RET,q)Abort, (.)Abort back, (?)Help: ");
+X	      goto qprompt;
+X	    }
+X	}
+X      /* delete the sucker */
+X      if (ldelete (slength, FALSE) != TRUE)
+X	{
+X	  /* error while deleting */
+X	  mlwrite ("ERROR while deleteing");
+X	  return (FALSE);
+X	}
+X      /* and insert its replacement */
+X      for (i = 0; i < rlength; i++)
+X	{
+X	  tmpc = rpat[i];
+X	  s = (tmpc == '\n' ? lnewline () : linsert (1, tmpc));
+X	  if (s != TRUE)
+X	    {
+X	      /* error while inserting */
+X	      mlwrite ("Out of memory while inserting");
+X	      return (FALSE);
+X	    }
+X	}
+X
+X      numsub++;			/* increment # of substitutions */
+X    }
+X
+X  /* and report the results */
+X  mlwrite ("%d substitutions", numsub);
+X  return (TRUE);
+X}
+X
+X/* search forward for a <patrn>
+X */
+Xint forscan (char *patrn, int leavep)
+X{
+X  LINE *curline;		/* current line during scan */
+X  LINE *lastline;		/* last line position during scan */
+X  LINE *matchline;		/* current line during matching */
+X  char *patptr;			/* pointer into pattern */
+X  int curoff;			/* position within current line */
+X  int lastoff;			/* position within last line */
+X  int c;			/* character at current position */
+X  int matchoff;			/* position in matching line */
+X
+X  /* setup local scan pointers to global "." */
+X  curline = curwp->w_dotp;
+X  curoff = curwp->w_doto;
+X
+X  /* scan each character until we hit the head link record */
+X  while (curline != curbp->b_linep)
+X    {
+X      /* save the current position in case we need to restore it on a match */
+X      lastline = curline;
+X      lastoff = curoff;
+X
+X      /* get the current character resolving EOLs */
+X      if (curoff == llength (curline))
+X	{			/* if at EOL */
+X	  curline = lforw (curline); /* skip to next line */
+X	  curoff = 0;
+X	  c = '\n';		/* and return a <NL> */
+X	}
+X      else
+X	c = lgetc (curline, curoff++); /* get the char */
+X
+X      /* test it against first char in pattern */
+X      if (eq (c, patrn[0]) != FALSE) /* if we find it. */
+X	{
+X	  /* setup match pointers */
+X	  matchline = curline;
+X	  matchoff = curoff;
+X	  patptr = &patrn[0];
+X
+X	  /* scan through patrn for a match */
+X	  while (*++patptr != 0)
+X	    {
+X	      /* advance all the pointers */
+X	      if (matchoff == llength (matchline))
+X		{
+X		  /* advance past EOL */
+X		  matchline = lforw (matchline);
+X		  matchoff = 0;
+X		  c = '\n';
+X		}
+X	      else
+X		c = lgetc (matchline, matchoff++);
+X
+X	      /* and test it against the pattern */
+X	      if (eq (*patptr, c) == FALSE)
+X		goto fail;
+X	    }
+X
+X	  /* A SUCCESSFULL MATCH!!! */
+X	  /* reset the global "." pointers */
+X	  if (leavep == PTEND)
+X	    {			/* at end of string */
+X	      curwp->w_dotp = matchline;
+X	      curwp->w_doto = matchoff;
+X	    }
+X	  else
+X	    {			/* at begining of string */
+X	      curwp->w_dotp = lastline;
+X	      curwp->w_doto = lastoff;
+X	    }
+X	  curwp->w_flag |= WFMOVE; /* flag that we have moved */
+X	  return (TRUE);
+X	}
+X    fail:;			/* continue to search */
+X    }
+X  /* we could not find a match */
+X  return (FALSE);
+X}
+X
+X/* expandp: expand control key sequences for output
+X */
+Xvoid expandp (char *srcstr, char *deststr, int maxlength)
+X{
+X  char c;			/* current char to translate */
+X
+X  /* scan through the string */
+X  while ((c = *srcstr++) != 0)
+X    {
+X      if (c == '\n')
+X	{			/* its an EOL */
+X	  *deststr++ = '<';
+X	  *deststr++ = 'N';
+X	  *deststr++ = 'L';
+X	  *deststr++ = '>';
+X	  maxlength -= 4;
+X	}
+X      else if (c < 0x20 || c == 0x7f)
+X	{			/* control character */
+X	  *deststr++ = '^';
+X	  *deststr++ = c ^ 0x40;
+X	  maxlength -= 2;
+X	}
+X      else if (c == '%')
+X	{
+X	  *deststr++ = '%';
+X	  *deststr++ = '%';
+X	  maxlength -= 2;
+X	}
+X      else
+X	{			/* any other character */
+X	  *deststr++ = c;
+X	  maxlength--;
+X	}
+X
+X      /* check for maxlength */
+X      if (maxlength < 4)
+X	{
+X	  *deststr++ = '$';
+X	  *deststr = '\0';
+X	  return;
+X	}
+X    }
+X  *deststr = '\0';
+X  return;
+X}
+END-of-search.c
+echo x - tcap.c
+sed 's/^X//' >tcap.c << 'END-of-tcap.c'
+X/* termios video driver */
+X
+X#define	termdef	1		/* don't define "term" external */
+X
+X#include <stdio.h>		/* puts(3), snprintf(3) */
+X#include "estruct.h"
+X#include "edef.h"
+X#undef CTRL
+X#include <sys/ioctl.h>
+X
+Xextern int tgetent();
+Xextern char *tgetstr();
+Xextern char *tgoto();
+Xextern void tputs();
+X
+Xextern char *getenv();
+Xextern void ttopen();
+Xextern int ttgetc();
+Xextern void ttputc();
+Xextern void ttflush();
+Xextern void ttclose();
+X
+Xvoid getwinsize();
+Xvoid tcapopen();
+Xvoid tcapmove(int row, int col);
+Xvoid tcapeeol();
+Xvoid tcapeeop();
+Xvoid tcaprev();
+Xvoid tcapbeep();
+X
+X#define	MARGIN 8
+X#define	SCRSIZ 64
+X#define BEL 0x07
+X#define TCAPSLEN 64
+X
+Xchar tcapbuf[TCAPSLEN];		/* capabilities actually used */
+Xchar *CM, *CE, *CL, *SO, *SE;
+X
+XTERM term = {
+X  0, 0, MARGIN, SCRSIZ, tcapopen, ttclose, ttgetc, ttputc,
+X  ttflush, tcapmove, tcapeeol, tcapeeop, tcapbeep, tcaprev
+X};
+X
+Xvoid getwinsize ()
+X{
+X  int cols, rows;
+X#ifndef FORCE_COLS
+X  struct winsize ws;
+X
+X  ioctl (0, TIOCGWINSZ, &ws);
+X  cols = ws.ws_col;
+X  rows = ws.ws_row;
+X#else
+X  cols = FORCE_COLS;
+X  rows = FORCE_ROWS;
+X#endif
+X  if ((cols < 10) || (rows < 3))
+X    {
+X      puts ("Unbelievable screen size\n");
+X      exit (1);
+X    }
+X  term.t_ncol = cols;
+X  term.t_nrow = rows-1;
+X}
+X
+Xvoid tcapopen ()
+X{
+X  char tcbuf[1024], err_str[72];
+X  char *p, *tv_stype;
+X
+X  if ((tv_stype = getenv ("TERM")) == NULL)
+X    {
+X      puts ("Environment variable TERM not defined\n");
+X      exit (1);
+X    }
+X  if ((tgetent (tcbuf, tv_stype)) != 1)
+X    {
+X      snprintf (err_str, 72, "Unknown terminal type %s\n", tv_stype);
+X      puts (err_str);
+X      exit (1);
+X    }
+X  p = tcapbuf;
+X  CL = tgetstr ("cl", &p);
+X  CM = tgetstr ("cm", &p);
+X  CE = tgetstr ("ce", &p);
+X  SE = tgetstr ("se", &p);
+X  SO = tgetstr ("so", &p);
+X
+X  if (CE == NULL)
+X    eolexist = FALSE;
+X  if (SO != NULL && SE != NULL)
+X    revexist = TRUE;
+X  if (CL == NULL || CM == NULL)
+X    {
+X      puts ("Insufficient termcap! (needs cl & cm abilities)\n");
+X      exit (1);
+X    }
+X  if (p >= &tcapbuf[TCAPSLEN])	/* XXX */
+X    {
+X      puts ("Terminal description too big!\n");
+X      exit (1);
+X    }
+X  ttopen ();
+X}
+X
+Xvoid tcaprev (int state)
+X{
+X  if (revexist)
+X    tputs ((state ? SO : SE), 1, ttputc);
+X}
+X
+Xvoid tcapmove (int row, int col)
+X{
+X  tputs (tgoto (CM, col, row), 1, ttputc);
+X}
+X
+Xvoid tcapeeol ()
+X{
+X  tputs (CE, 1, ttputc);
+X}
+X
+Xvoid tcapeeop ()
+X{
+X  tputs (CL, 1, ttputc);
+X}
+X
+Xvoid tcapbeep ()
+X{
+X  ttputc (BEL);
+X}
+END-of-tcap.c
+echo x - termio.c
+sed 's/^X//' >termio.c << 'END-of-termio.c'
+X/*
+X * The functions in this file negotiate with the operating system for
+X * characters, and write characters in a barely buffered fashion on the
+X * display
+X */
+X
+X#undef CTRL
+X#include <termios.h>
+X#include <unistd.h>
+X#include <signal.h>
+X#include <stdio.h>		/* puts(3), setbuffer(3), ... */
+X#include <sys/ioctl.h>		/* to get at the typeahead */
+X
+Xvoid ttopen ();
+Xvoid ttclose ();
+Xvoid ttputc (int c);
+Xvoid ttflush ();
+Xint ttgetc ();
+Xint typahead ();
+X
+X#define	TBUFSIZ	128
+Xchar tobuf[TBUFSIZ];		/* terminal output buffer */
+Xstruct termios ostate, nstate;
+X
+X/*
+X * This function is called once to set up the terminal device streams.
+X */
+Xvoid ttopen ()
+X{
+X  /* save terminal flags */
+X  if ((tcgetattr(0, &ostate) < 0) || (tcgetattr(0, &nstate) < 0))
+X    {
+X      puts ("Can't read terminal capabilites\n");
+X      exit (1);
+X    }
+X  cfmakeraw(&nstate);		/* set raw mode */
+X  nstate.c_cc[VMIN] = 1;
+X  nstate.c_cc[VTIME] = 0;	/* block indefinitely for a single char */
+X  if (tcsetattr(0, TCSADRAIN, &nstate) < 0)
+X    {
+X      puts ("Can't set terminal mode\n");
+X      exit (1);
+X    }
+X  /* provide a smaller terminal output buffer so that the type ahead
+X   * detection works better (more often) */
+X  setbuffer (stdout, &tobuf[0], TBUFSIZ);
+X  signal (SIGTSTP, SIG_DFL);
+X}
+X
+X/*
+X * This function gets called just before we go back home to the command
+X * interpreter
+X */
+Xvoid ttclose ()
+X{
+X  ttflush ();
+X  if (tcsetattr(0, TCSADRAIN, &ostate) < 0)
+X    {
+X      puts ("Can't restore terminal flags");
+X      exit (1);
+X    }
+X}
+X
+X/*
+X * Write a character to the display
+X */
+Xvoid ttputc (int c)
+X{
+X  fputc (c, stdout);
+X}
+X
+X/*
+X * Flush terminal buffer. Does real work where the terminal output is buffered
+X * up. A no-operation on systems where byte at a time terminal I/O is done
+X */
+Xvoid ttflush ()
+X{
+X  tcdrain (0);
+X  fflush (stdout);
+X}
+X
+X/*
+X * Read a character from the terminal, performing no editing and doing no echo
+X * at all
+X */
+Xint ttgetc ()
+X{
+X  return (127 & fgetc (stdin));
+X}
+X
+X/* typahead: Check to see if any characters are already in the keyboard buffer
+X */
+Xint typahead ()
+X{
+X  int x;			/* holds # of pending chars */
+X  return ((ioctl (0, FIONREAD, &x) < 0) ? 0 : x);
+X}
+END-of-termio.c
+echo x - window.c
+sed 's/^X//' >window.c << 'END-of-window.c'
+X/*
+X * Window management. Some of the functions are internal, and some are
+X * attached to keys that the user actually types
+X */
+X
+X#include <stdlib.h>		/* free(3), malloc(3) */
+X#include "estruct.h"
+X#include "edef.h"
+X
+Xextern void upmode ();
+Xextern void mlwrite ();
+Xextern int backpage (int f, int n);
+Xextern int forwpage (int f, int n);
+X
+Xint refresh (int f, int n);
+Xint nextwind (int f, int n);
+Xint prevwind (int f, int n);
+Xint onlywind (int f, int n);
+Xint splitwind (int f, int n);
+Xint enlargewind (int f, int n);
+Xint shrinkwind (int f, int n);
+XWINDOW* wpopup ();
+Xint scrnextup (int f, int n);
+Xint scrnextdw (int f, int n);
+X
+X/*
+X * Refresh the screen. With no argument, it does the refresh and centers
+X * the cursor on the screen. With an argument it does a reposition instead.
+X * Bound to "C-L"
+X */
+Xint refresh (int f, int n)
+X{
+X  if (n >= 0)
+X    n++;			/* adjust to screen row */
+X  if (f == FALSE)
+X    {
+X      sgarbf = TRUE;
+X      n = 0;			/* Center dot */
+X    }
+X  curwp->w_force = n;
+X  curwp->w_flag |= WFFORCE;
+X  return (TRUE);
+X}
+X
+X/*
+X * The command make the next window (next => down the screen) the current
+X * window. There are no real errors, although the command does nothing if
+X * there is only 1 window on the screen. Bound to "C-X C-N"
+X */
+Xint nextwind (int f, int n)
+X{
+X  WINDOW *wp;
+X
+X  if ((wp = curwp->w_wndp) == NULL)
+X    wp = wheadp;
+X
+X  curwp = wp;
+X  curbp = wp->w_bufp;
+X  upmode ();
+X  return (TRUE);
+X}
+X
+X/*
+X * This command makes the previous window (previous => up the screen) the
+X * current window. There arn't any errors, although the command does not do a
+X * lot if there is 1 window
+X */
+Xint prevwind (int f, int n)
+X{
+X  WINDOW *wp1, *wp2;
+X
+X  wp1 = wheadp;
+X  wp2 = curwp;
+X
+X  if (wp1 == wp2)
+X    wp2 = NULL;
+X
+X  while (wp1->w_wndp != wp2)
+X    wp1 = wp1->w_wndp;
+X
+X  curwp = wp1;
+X  curbp = wp1->w_bufp;
+X  upmode ();
+X  return (TRUE);
+X}
+X
+X/*
+X * This command makes the current window the only window on the screen. Bound
+X * to "C-X 1". Try to set the framing so that "." does not have to move on the
+X * display. Some care has to be taken to keep the values of dot and mark in
+X * the buffer structures right if the distruction of a window makes a buffer
+X * become undisplayed
+X */
+Xint onlywind (int f, int n)
+X{
+X  WINDOW *wp;
+X  LINE *lp;
+X  int i;
+X
+X  while (wheadp != curwp)
+X    {
+X      wp = wheadp;
+X      wheadp = wp->w_wndp;
+X      if (--wp->w_bufp->b_nwnd == 0)
+X	{
+X	  wp->w_bufp->b_dotp = wp->w_dotp;
+X	  wp->w_bufp->b_doto = wp->w_doto;
+X	  wp->w_bufp->b_markp = wp->w_markp;
+X	  wp->w_bufp->b_marko = wp->w_marko;
+X	}
+X      free ((char *) wp);
+X    }
+X  while (curwp->w_wndp != NULL)
+X    {
+X      wp = curwp->w_wndp;
+X      curwp->w_wndp = wp->w_wndp;
+X      if (--wp->w_bufp->b_nwnd == 0)
+X	{
+X	  wp->w_bufp->b_dotp = wp->w_dotp;
+X	  wp->w_bufp->b_doto = wp->w_doto;
+X	  wp->w_bufp->b_markp = wp->w_markp;
+X	  wp->w_bufp->b_marko = wp->w_marko;
+X	}
+X      free ((char *) wp);
+X    }
+X  lp = curwp->w_linep;
+X  i = curwp->w_toprow;
+X  while (i != 0 && lback (lp) != curbp->b_linep)
+X    {
+X      --i;
+X      lp = lback (lp);
+X    }
+X  curwp->w_toprow = 0;
+X  curwp->w_ntrows = term.t_nrow - 1;
+X  curwp->w_linep = lp;
+X  curwp->w_flag |= WFMODE | WFHARD;
+X  return (TRUE);
+X}
+X
+X/*
+X * Split the current window. A window smaller than 3 lines cannot be split.
+X * The only other error that is possible is a "malloc" failure allocating the
+X * structure for the new window. Bound to "C-X 2"
+X */
+Xint splitwind (int f, int n)
+X{
+X  LINE *lp;
+X  WINDOW *wp, *wp1, *wp2;
+X  int ntru, ntrl, ntrd;
+X
+X  if (curwp->w_ntrows < 3)
+X    {
+X      mlwrite ("Cannot split a %d line window", curwp->w_ntrows);
+X      return (FALSE);
+X    }
+X  if ((wp = (WINDOW *) malloc (sizeof (WINDOW))) == NULL)
+X    {
+X      mlwrite ("Cannot allocate WINDOW block");
+X      return (FALSE);
+X    }
+X  ++curbp->b_nwnd;		/* Displayed twice */
+X  wp->w_bufp = curbp;
+X  wp->w_dotp = curwp->w_dotp;
+X  wp->w_doto = curwp->w_doto;
+X  wp->w_markp = curwp->w_markp;
+X  wp->w_marko = curwp->w_marko;
+X  wp->w_flag = 0;
+X  wp->w_force = 0;
+X  ntru = (curwp->w_ntrows - 1) / 2; /* Upper size */
+X  ntrl = (curwp->w_ntrows - 1) - ntru; /* Lower size */
+X  lp = curwp->w_linep;
+X  ntrd = 0;
+X  while (lp != curwp->w_dotp)
+X    {
+X      ++ntrd;
+X      lp = lforw (lp);
+X    }
+X  lp = curwp->w_linep;
+X  if (ntrd <= ntru)
+X    {				/* Old is upper window */
+X      if (ntrd == ntru)		/* Hit mode line */
+X	lp = lforw (lp);
+X      curwp->w_ntrows = ntru;
+X      wp->w_wndp = curwp->w_wndp;
+X      curwp->w_wndp = wp;
+X      wp->w_toprow = curwp->w_toprow + ntru + 1;
+X      wp->w_ntrows = ntrl;
+X    }
+X  else
+X    {				/* Old is lower window */
+X      wp1 = NULL;
+X      wp2 = wheadp;
+X      while (wp2 != curwp)
+X	{
+X	  wp1 = wp2;
+X	  wp2 = wp2->w_wndp;
+X	}
+X      if (wp1 == NULL)
+X	wheadp = wp;
+X      else
+X	wp1->w_wndp = wp;
+X      wp->w_wndp = curwp;
+X      wp->w_toprow = curwp->w_toprow;
+X      wp->w_ntrows = ntru;
+X      ++ntru;			/* Mode line */
+X      curwp->w_toprow += ntru;
+X      curwp->w_ntrows = ntrl;
+X      while (ntru--)
+X	lp = lforw (lp);
+X    }
+X  curwp->w_linep = lp;		/* Adjust the top lines */
+X  wp->w_linep = lp;		/* if necessary */
+X  curwp->w_flag |= WFMODE | WFHARD;
+X  wp->w_flag |= WFMODE | WFHARD;
+X  return (TRUE);
+X}
+X
+X/*
+X * Enlarge the current window. Find the window that loses space. Make sure it
+X * is big enough. If so, hack the window descriptions, and ask redisplay to do
+X * all the hard work. You don't just set "force reframe" because dot would
+X * move. Bound to "C-X Z"
+X */
+Xint enlargewind (int f, int n)
+X{
+X  WINDOW *adjwp;
+X  LINE *lp;
+X  int i;
+X
+X  if (n < 0)
+X    return (shrinkwind (f, -n));
+X  if (wheadp->w_wndp == NULL)
+X    {
+X      mlwrite ("Only one window");
+X      return (FALSE);
+X    }
+X  if ((adjwp = curwp->w_wndp) == NULL)
+X    {
+X      adjwp = wheadp;
+X      while (adjwp->w_wndp != curwp)
+X	adjwp = adjwp->w_wndp;
+X    }
+X  if (adjwp->w_ntrows <= n)
+X    {
+X      mlwrite ("Impossible change");
+X      return (FALSE);
+X    }
+X  if (curwp->w_wndp == adjwp)
+X    {				/* Shrink below */
+X      lp = adjwp->w_linep;
+X      for (i = 0; i < n && lp != adjwp->w_bufp->b_linep; ++i)
+X	lp = lforw (lp);
+X      adjwp->w_linep = lp;
+X      adjwp->w_toprow += n;
+X    }
+X  else
+X    {				/* Shrink above */
+X      lp = curwp->w_linep;
+X      for (i = 0; i < n && lback (lp) != curbp->b_linep; ++i)
+X	lp = lback (lp);
+X      curwp->w_linep = lp;
+X      curwp->w_toprow -= n;
+X    }
+X  curwp->w_ntrows += n;
+X  adjwp->w_ntrows -= n;
+X  curwp->w_flag |= WFMODE | WFHARD;
+X  adjwp->w_flag |= WFMODE | WFHARD;
+X  return (TRUE);
+X}
+X
+X/*
+X * Shrink the current window. Find the window that gains space. Hack at the
+X * window descriptions. Ask the redisplay to do all the hard work
+X */
+Xint shrinkwind (int f, int n)
+X{
+X  WINDOW *adjwp;
+X  LINE *lp;
+X  int i;
+X
+X  if (n < 0)
+X    return (enlargewind (f, -n));
+X  if (wheadp->w_wndp == NULL)
+X    {
+X      mlwrite ("Only one window");
+X      return (FALSE);
+X    }
+X  if ((adjwp = curwp->w_wndp) == NULL)
+X    {
+X      adjwp = wheadp;
+X      while (adjwp->w_wndp != curwp)
+X	adjwp = adjwp->w_wndp;
+X    }
+X  if (curwp->w_ntrows <= n)
+X    {
+X      mlwrite ("Impossible change");
+X      return (FALSE);
+X    }
+X  if (curwp->w_wndp == adjwp)
+X    {				/* Grow below */
+X      lp = adjwp->w_linep;
+X      for (i = 0; i < n && lback (lp) != adjwp->w_bufp->b_linep; ++i)
+X	lp = lback (lp);
+X      adjwp->w_linep = lp;
+X      adjwp->w_toprow -= n;
+X    }
+X  else
+X    {				/* Grow above */
+X      lp = curwp->w_linep;
+X      for (i = 0; i < n && lp != curbp->b_linep; ++i)
+X	lp = lforw (lp);
+X      curwp->w_linep = lp;
+X      curwp->w_toprow += n;
+X    }
+X  curwp->w_ntrows -= n;
+X  adjwp->w_ntrows += n;
+X  curwp->w_flag |= WFMODE | WFHARD;
+X  adjwp->w_flag |= WFMODE | WFHARD;
+X  return (TRUE);
+X}
+X
+X/*
+X * Pick a window for a pop-up. Split the screen if there is only one window.
+X * Pick the uppermost window that isn't the current window. An LRU algorithm
+X * might be better. Return a pointer, or NULL on error
+X */
+XWINDOW* wpopup ()
+X{
+X  WINDOW *wp;
+X
+X  if (wheadp->w_wndp == NULL	/* Only 1 window */
+X      && splitwind (FALSE, 0) == FALSE)	/* and it won't split */
+X    return (NULL);
+X  wp = wheadp;			/* Find window to use */
+X  while (wp != NULL && wp == curwp)
+X    wp = wp->w_wndp;
+X  return (wp);
+X}
+X
+X/*
+X * scroll the next window up (back) a page
+X */
+Xint scrnextup (int f, int n)
+X{
+X  nextwind (FALSE, 1);
+X  backpage (f, n);
+X  return (prevwind (FALSE, 1));
+X}
+X
+X/*
+X * scroll the next window down (forward) a page
+X */
+Xint scrnextdw (int f, int n)
+X{
+X  nextwind (FALSE, 1);
+X  forwpage (f, n);
+X  return (prevwind (FALSE, 1));
+X}
+END-of-window.c
+echo x - word.c
+sed 's/^X//' >word.c << 'END-of-word.c'
+X/*
+X * The routines in this file implement commands that work word at a time.
+X * There are all sorts of word mode commands. If I do any sentence and/or
+X * paragraph mode commands, they are likely to be put in this file
+X */
+X
+X#include "estruct.h"
+X#include "edef.h"
+X
+Xextern int backchar (int f, int n);
+Xextern int forwchar (int f, int n);
+Xextern void lchange (int flag);
+Xextern int ldelete (int n, int kflag);
+Xextern void mlwrite ();
+Xextern int gotobop (int f, int n);
+Xextern int gotoeop (int f, int n);
+Xextern int linsert (int n, int c);
+Xextern int lnewline ();
+X
+Xint backword (int f, int n);
+Xint forwword (int f, int n);
+Xint upperword (int f, int n);
+Xint lowerword (int f, int n);
+Xint capword (int f, int n);
+Xint delfword (int f, int n);
+Xint delbword (int f, int n);
+Xint inword ();
+Xint fillpara (int f, int n);
+X
+X/*
+X * Move the cursor backward by "n" words. All of the details of motion are
+X * performed by the "backchar" and "forwchar" routines. Error if you try to
+X * move beyond the buffers
+X */
+Xint backword (int f, int n)
+X{
+X  if (n < 0)
+X    return (forwword (f, -n));
+X  if (backchar (FALSE, 1) == FALSE)
+X    return (FALSE);
+X  while (n--)
+X    {
+X      while (inword () == FALSE)
+X	{
+X	  if (backchar (FALSE, 1) == FALSE)
+X	    return (FALSE);
+X	}
+X      while (inword () != FALSE)
+X	{
+X	  if (backchar (FALSE, 1) == FALSE)
+X	    return (FALSE);
+X	}
+X    }
+X  return (forwchar (FALSE, 1));
+X}
+X
+X/*
+X * Move the cursor forward by the specified number of words. All of the motion
+X * is done by "forwchar". Error if you try and move beyond the buffer's end
+X */
+Xint forwword (int f, int n)
+X{
+X  if (n < 0)
+X    return (backword (f, -n));
+X  while (n--)
+X    {
+X      while (inword () != FALSE)
+X	{
+X	  if (forwchar (FALSE, 1) == FALSE)
+X	    return (FALSE);
+X	}
+X      while (inword () == FALSE)
+X	{
+X	  if (forwchar (FALSE, 1) == FALSE)
+X	    return (FALSE);
+X	}
+X    }
+X  return (TRUE);
+X}
+X
+X/*
+X * Move the cursor forward by the specified number of words. As you move,
+X * convert any characters to upper case. Error if you try and move beyond the
+X * end of the buffer. Bound to "M-U"
+X */
+Xint upperword (int f, int n)
+X{
+X  int c;
+X
+X  if (n < 0)
+X    return (FALSE);
+X  while (n--)
+X    {
+X      while (inword () == FALSE)
+X	{
+X	  if (forwchar (FALSE, 1) == FALSE)
+X	    return (FALSE);
+X	}
+X      while (inword () != FALSE)
+X	{
+X	  c = lgetc (curwp->w_dotp, curwp->w_doto);
+X	  if (c >= 'a' && c <= 'z')
+X	    {
+X	      c -= 'a' - 'A';
+X	      lputc (curwp->w_dotp, curwp->w_doto, c);
+X	      lchange (WFHARD);
+X	    }
+X	  if (forwchar (FALSE, 1) == FALSE)
+X	    return (FALSE);
+X	}
+X    }
+X  return (TRUE);
+X}
+X
+X/*
+X * Move the cursor forward by the specified number of words. As you move
+X * convert characters to lower case. Error if you try and move over the end of
+X * the buffer. Bound to "M-L"
+X */
+Xint lowerword (int f, int n)
+X{
+X  int c;
+X
+X  if (n < 0)
+X    return (FALSE);
+X  while (n--)
+X    {
+X      while (inword () == FALSE)
+X	{
+X	  if (forwchar (FALSE, 1) == FALSE)
+X	    return (FALSE);
+X	}
+X      while (inword () != FALSE)
+X	{
+X	  c = lgetc (curwp->w_dotp, curwp->w_doto);
+X	  if (c >= 'A' && c <= 'Z')
+X	    {
+X	      c += 'a' - 'A';
+X	      lputc (curwp->w_dotp, curwp->w_doto, c);
+X	      lchange (WFHARD);
+X	    }
+X	  if (forwchar (FALSE, 1) == FALSE)
+X	    return (FALSE);
+X	}
+X    }
+X  return (TRUE);
+X}
+X
+X/*
+X * Move the cursor forward by the specified number of words. As you move
+X * convert the first character of the word to upper case, and subsequent
+X * characters to lower case. Error if you try and move past the end of the
+X * buffer. Bound to "M-C"
+X */
+Xint capword (int f, int n)
+X{
+X  int c;
+X
+X  if (n < 0)
+X    return (FALSE);
+X  while (n--)
+X    {
+X      while (inword () == FALSE)
+X	{
+X	  if (forwchar (FALSE, 1) == FALSE)
+X	    return (FALSE);
+X	}
+X      if (inword () != FALSE)
+X	{
+X	  c = lgetc (curwp->w_dotp, curwp->w_doto);
+X	  if (c >= 'a' && c <= 'z')
+X	    {
+X	      c -= 'a' - 'A';
+X	      lputc (curwp->w_dotp, curwp->w_doto, c);
+X	      lchange (WFHARD);
+X	    }
+X	  if (forwchar (FALSE, 1) == FALSE)
+X	    return (FALSE);
+X	  while (inword () != FALSE)
+X	    {
+X	      c = lgetc (curwp->w_dotp, curwp->w_doto);
+X	      if (c >= 'A' && c <= 'Z')
+X		{
+X		  c += 'a' - 'A';
+X		  lputc (curwp->w_dotp, curwp->w_doto, c);
+X		  lchange (WFHARD);
+X		}
+X	      if (forwchar (FALSE, 1) == FALSE)
+X		return (FALSE);
+X	    }
+X	}
+X    }
+X  return (TRUE);
+X}
+X
+X/*
+X * Kill forward by "n" words. Remember the location of dot. Move forward by
+X * the right number of words. Put dot back where it was and issue the kill
+X * command for the right number of characters. Bound to "M-D"
+X */
+Xint delfword (int f, int n)
+X{
+X  LINE *dotp;
+X  int size, doto;
+X
+X  if (n < 0)
+X    return (FALSE);
+X  dotp = curwp->w_dotp;
+X  doto = curwp->w_doto;
+X  size = 0;
+X  while (n--)
+X    {
+X      while (inword () != FALSE)
+X	{
+X	  if (forwchar (FALSE, 1) == FALSE)
+X	    return (FALSE);
+X	  ++size;
+X	}
+X      while (inword () == FALSE)
+X	{
+X	  if (forwchar (FALSE, 1) == FALSE)
+X	    return (FALSE);
+X	  ++size;
+X	}
+X    }
+X  curwp->w_dotp = dotp;
+X  curwp->w_doto = doto;
+X  return (ldelete (size, TRUE));
+X}
+X
+X/*
+X * Kill backwards by "n" words. Move backwards by the desired number of words,
+X * counting the characters. When dot is finally moved to its resting place,
+X * fire off the kill command. Bound to "M-Rubout" and to "M-Backspace"
+X */
+Xint delbword (int f, int n)
+X{
+X  int size;
+X
+X  if (n < 0)
+X    return (FALSE);
+X  if (backchar (FALSE, 1) == FALSE)
+X    return (FALSE);
+X  size = 0;
+X  while (n--)
+X    {
+X      while (inword () == FALSE)
+X	{
+X	  if (backchar (FALSE, 1) == FALSE)
+X	    return (FALSE);
+X	  ++size;
+X	}
+X      while (inword () != FALSE)
+X	{
+X	  if (backchar (FALSE, 1) == FALSE)
+X	    return (FALSE);
+X	  ++size;
+X	}
+X    }
+X  if (forwchar (FALSE, 1) == FALSE)
+X    return (FALSE);
+X  return (ldelete (size, TRUE));
+X}
+X
+X/*
+X * Return TRUE if the character at dot is a character that is considered to be
+X * part of a word. The word character list is hard coded. Should be setable
+X */
+Xint inword ()
+X{
+X  int c;
+X
+X  if (curwp->w_doto == llength (curwp->w_dotp))
+X    return (FALSE);
+X  c = lgetc (curwp->w_dotp, curwp->w_doto);
+X  if (c >= 'a' && c <= 'z')
+X    return (TRUE);
+X  if (c >= 'A' && c <= 'Z')
+X    return (TRUE);
+X  if (c >= '0' && c <= '9')
+X    return (TRUE);
+X  if (c == '$' || c == '_')	/* For identifiers */
+X    return (TRUE);
+X  return (FALSE);
+X}
+X
+X/* Fill the current paragraph according to the current fill column
+X */
+Xint fillpara (int f, int n)
+X{
+X  LINE *eopline;		/* pointer to line just past EOP */
+X  char wbuf[NLINE];		/* buffer for current word */
+X  int c;			/* current char during scan */
+X  int wordlen;			/* length of current word */
+X  int clength;			/* position on line during fill */
+X  int i;			/* index during word copy */
+X  int newlength;		/* tentative new line length */
+X  int eopflag;			/* Are we at the End-Of-Paragraph? */
+X  int firstflag;		/* first word? (needs no space) */
+X
+X  if (fillcol == 0)
+X    {				/* no fill column set */
+X      mlwrite ("No fill column set");
+X      return (FALSE);
+X    }
+X  /* record the pointer to the line just past the EOP */
+X  gotoeop (FALSE, 1);
+X  eopline = lforw (curwp->w_dotp);
+X
+X  /* and back top the begining of the paragraph */
+X  gotobop (FALSE, 1);
+X
+X  /* initialize various info */
+X  clength = curwp->w_doto;
+X  if (clength && curwp->w_dotp->l_text[0] == TAB)
+X    clength = 8;
+X  wordlen = 0;
+X
+X  /* scan through lines, filling words */
+X  firstflag = TRUE;
+X  eopflag = FALSE;
+X  while (!eopflag)
+X    {
+X      /* get the next character in the paragraph */
+X      if (curwp->w_doto == llength (curwp->w_dotp))
+X	{
+X	  c = ' ';
+X	  if (lforw (curwp->w_dotp) == eopline)
+X	    eopflag = TRUE;
+X	}
+X      else
+X	c = lgetc (curwp->w_dotp, curwp->w_doto);
+X
+X      ldelete (1, FALSE);	/* and then delete it */
+X
+X      /* if not a separator, just add it in */
+X      if (c != ' ' && c != '	')
+X	{
+X	  if (wordlen < (NLINE - 1))
+X	    wbuf[wordlen++] = c;
+X	}
+X      else if (wordlen)
+X	{
+X	  /* at a word break with a word waiting */
+X	  /* calculate tantitive new length with word added */
+X	  newlength = clength + 1 + wordlen;
+X	  if (newlength <= fillcol)
+X	    {
+X	      /* add word to current line */
+X	      if (!firstflag)
+X		{
+X		  linsert (1, ' '); /* the space */
+X		  ++clength;
+X		}
+X	      firstflag = FALSE;
+X	    }
+X	  else
+X	    {
+X	      lnewline ();	/* start a new line */
+X	      clength = 0;
+X	    }
+X
+X	  /* and add the word in in either case */
+X	  for (i = 0; i < wordlen; i++)
+X	    {
+X	      linsert (1, wbuf[i]);
+X	      ++clength;
+X	    }
+X	  wordlen = 0;
+X	}
+X    }
+X  /* and add a last newline for the end of our new paragraph */
+X  return (lnewline ());
+X}
+END-of-word.c
+exit
+
