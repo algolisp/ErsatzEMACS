@@ -194,11 +194,13 @@ void vtputc (int c)
     }
   else if (c == '\t')
     {
+      int n = vtcol;
       do
 	{
 	  vtputc (' ');
+	  n++;
 	}
-      while ((vtcol & 0x07) != 0);
+      while ((n & 0x07) != 0);
     }
   else if (c < 0x20 || c == 0x7F)
     {
@@ -237,11 +239,13 @@ void vtpute (int c)
     }
   else if (c == '\t')
     {
+      int n = vtcol;
       do
 	{
 	  vtpute (' ');
+	  n++;
 	}
-      while (((vtcol + lbound) & 0x07) != 0);
+      while (((n + lbound) & 0x07) != 0);
     }
   else if (c < 0x20 || c == 0x7F)
     {
