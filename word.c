@@ -214,9 +214,12 @@ int delfword (int f, int n)
   size = 0;
   while (n--)
     {
+      if (inword () != FALSE)
       while (inword () != FALSE)
 	{
 	  x = curwp->w_doto;
+	  if (x == l->l_used)
+	    break;
 	  if (forwchar (FALSE, 1) == FALSE)
 	    return (FALSE);
 	  if (curwp->w_doto <= x)
@@ -224,9 +227,12 @@ int delfword (int f, int n)
 	  else
 	    size += curwp->w_doto - x;
 	}
+      else
       while (inword () == FALSE)
 	{
 	  x = curwp->w_doto;
+	  if (x == l->l_used)
+	    break;
 	  if (forwchar (FALSE, 1) == FALSE)
 	    return (FALSE);
 	  if (curwp->w_doto <= x)
@@ -257,6 +263,7 @@ int delbword (int f, int n)
   size = x - curwp->w_doto;
   while (n--)
     {
+      if (inword () != FALSE)
       while (inword () == FALSE)
 	{
 	  x = curwp->w_doto;
@@ -267,6 +274,7 @@ int delbword (int f, int n)
 	  else
 	    size += x - curwp->w_doto;
 	}
+      else
       while (inword () != FALSE)
 	{
 	  x = curwp->w_doto;
