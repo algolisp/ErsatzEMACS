@@ -409,6 +409,11 @@ int fillpara (int f, int n)
   return (lnewline ());
 }
 
+int na (int c)
+{
+  return !(isalpha(c) || ((c & 0x80) != 0));
+}
+
 int completeword (int f, int n)
 {
   static LINE *l, *cl;
@@ -419,11 +424,11 @@ int completeword (int f, int n)
     {
       cl = l = curwp->w_dotp;
       b = d = curwp->w_doto;
-      while (isspace (l->l_text[b]) && b != 0)
+      while (na (l->l_text[b]) && b != 0)
 	b--;
-      while (!isspace (l->l_text[b]) && b != 0)
+      while (!na (l->l_text[b]) && b != 0)
 	b--;
-      if (b != 0)
+      if (b != 0 || na (l->l_text[b]))
 	b++;
       cd = b;
       xx = 0;
@@ -447,12 +452,12 @@ int completeword (int f, int n)
     {
       if (xd == 0)
 	goto l;
-      while (isspace (cl->l_text[xd]) && xd != 0)
+      while (na (cl->l_text[xd]) && xd != 0)
 	xd--;
       xe = xd + 1;
-      while (!isspace (cl->l_text[xd]) && xd != 0)
+      while (!na (cl->l_text[xd]) && xd != 0)
 	xd--;
-      if (isspace (cl->l_text[xd]))
+      if (na (cl->l_text[xd]))
 	xd++;
       if (strncmp (l->l_text + b, cl->l_text + xd, d - b) == 0
 	  && xe - xd != d - b)
@@ -461,13 +466,13 @@ int completeword (int f, int n)
 	    x = xe - xd;
 	  break;
 	}
-      if (xd > 0)
+      if (xd > 0 && !(cl == l && xd == b))
 	xd--;
       continue;
     l:
       cl = lback (cl);
       xd = cl->l_used;
-      if (xd > 0)
+      if (xd > 0 && !(cl == l && xd == b))
 	xd--;
     }
   while (!(cl == l && xd == b));
