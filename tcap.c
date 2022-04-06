@@ -9,10 +9,19 @@
 #undef CTRL
 #include <sys/ioctl.h>
 
-extern int tgetent();
-extern char *tgetstr();
-extern char *tgoto();
-extern void tputs();
+char *tgoto(char *s, int c, int r)
+{
+  static char buf[32];
+
+  sprintf(buf,s,r+1,c+1);
+  return buf;
+}
+
+void tputs(char *s, int x, void (*f)())
+{
+  while (*s)
+    (*f)(*s++);
+}
 
 extern char *getenv();
 extern void ttopen();
@@ -36,7 +45,6 @@ void tcapboldoff();
 #define BEL 0x07
 #define TCAPSLEN 64
 
-char tcapbuf[TCAPSLEN];		/* capabilities actually used */
 char *CM, *CE, *CL, *SO, *SE, *MD, *ME;
 
 TERM term = {
@@ -70,43 +78,21 @@ void getwinsize ()
 
 void tcapopen ()
 {
-  char tcbuf[1024], err_str[72];
-  char *p, *tv_stype;
+  char *tv_stype;
 
   if ((tv_stype = getenv ("TERM")) == NULL)
     {
       puts ("Environment variable TERM not defined\n");
       exit (1);
     }
-  if ((tgetent (tcbuf, tv_stype)) != 1)
-    {
-      snprintf (err_str, 72, "Unknown terminal type %s\n", tv_stype);
-      puts (err_str);
-      exit (1);
-    }
-  p = tcapbuf;
-  CL = tgetstr ("cl", &p);
-  CM = tgetstr ("cm", &p);
-  CE = tgetstr ("ce", &p);
-  SE = tgetstr ("se", &p);
-  SO = tgetstr ("so", &p);
-  MD = tgetstr ("md", &p);
-  ME = tgetstr ("me", &p);
-
-  if (CE == NULL)
-    eolexist = FALSE;
-  if (SO != NULL && SE != NULL)
-    revexist = TRUE;
-  if (CL == NULL || CM == NULL)
-    {
-      puts ("Insufficient termcap! (needs cl & cm abilities)\n");
-      exit (1);
-    }
-  if (p >= &tcapbuf[TCAPSLEN])	/* XXX */
-    {
-      puts ("Terminal description too big!\n");
-      exit (1);
-    }
+  CL="\033[H\033[2J";
+  CM="\033[%d;%dH";
+  CE="\033[K";
+  SE="\033[27m";
+  SO="\033[7m";
+  MD="\033[1m";
+  ME="\033[0m";
+  revexist = TRUE;
   ttopen ();
 }
 
@@ -145,3 +131,4 @@ void tcapboldoff ()
 {
   tputs (ME, 1, ttputc);
 }
+
